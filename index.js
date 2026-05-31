@@ -25,7 +25,7 @@ let phoneNumber = global.botNumber || "";
 let phoneInput = "";
 const methodCodeQR = process.argv.includes("--qr");
 const methodCode = process.argv.includes("code");
-export function normalizePhone(input) {
+function normalizePhone(input) {
   let s = String(input).replace(/\D/g, '');
   if (!s) return '';
   if (s.startsWith('0')) s = s.replace(/^0+/, '');
