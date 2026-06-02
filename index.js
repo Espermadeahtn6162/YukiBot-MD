@@ -254,8 +254,7 @@ export async function startBot() {
         botReady = false;
         isRestarting = false;
         clearSession();
-        setTimeout(startBot, 3000);
-        return;
+        process.exit(1);
       }
       if (reason === DisconnectReason.connectionReplaced) {
         log.warn("Conexión reemplazada — cerrá la otra sesión antes de reconectar.");
@@ -268,9 +267,7 @@ export async function startBot() {
         botReady = false;
         reconexion = 0;
         isRestarting = false;
-        clearSession();
-        setTimeout(startBot, 3000);
-        return;
+        process.exit(1);
       }
       const delay = Math.min(3000 * reconexion, 30000);
       const reasonMessages = {
