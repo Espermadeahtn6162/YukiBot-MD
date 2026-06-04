@@ -228,7 +228,7 @@ export async function startBot() {
   try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
 
   sock.ev.on("connection.update", async (update) => {
-    const { qr, connection, lastDisconnect, isNewLogin } = update;
+    const { qr, connection, lastDisconnect, isNewLogin, receivedPendingNotifications } = update;
     if (qr != 0 && qr != undefined || methodCodeQR) {
       if (opcion == '1' || methodCodeQR) {
         console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
