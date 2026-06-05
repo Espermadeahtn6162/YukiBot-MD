@@ -117,7 +117,7 @@ async function vectorinkEnhanceFromBuffer(inputBuf, inputMime) {
   try {
     await fsp.mkdir(tmpDir, { recursive: true })
     const b64 = inputBuf.toString('base64')
-    const res = await fetchFn(API, { method: 'POST', headers: { 'content-type': 'application/json', accept: '*/*', origin: ORIGIN, referer: `${ORIGIN}/`, 'user-agent': UA }, body: JSON.stringify({ data }), signal: buildAbortSignal(TIMEOUT) })
+    const res = await fetchFn(API, { method: 'POST', headers: { 'content-type': 'application/json', accept: '*/*', origin: ORIGIN, referer: `${ORIGIN}/`, 'user-agent': UA }, body: JSON.stringify({ data: { image: b64 } }), signal: buildAbortSignal(TIMEOUT) })
     const j = await safeJson(res)
     if (!res.ok) {
       out.error = { step: 'request', status: res.status, body: j }

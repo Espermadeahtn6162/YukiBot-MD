@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import axios from 'axios';
 import FormData from 'form-data';
+import db from '#db';
 
 const langs = { typescript: 'ts', javascript: 'js', python: 'py', html: 'html', css: 'css', java: 'java', cpp: 'cpp', c: 'c', json: 'json', bash: 'sh', sql: 'sql', rust: 'rs', go: 'go', php: 'php', ruby: 'rb' };
 
@@ -63,8 +64,8 @@ export default {
       return msg.reply(`《✧》 Escriba una *petición* para que *ChatGPT* le responda.`);
     }
     const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-    const settings = global.db.data.settings[botId];
-    const user = global.db.data.users[msg.sender];
+    const settings = db.getSettings(botId);
+    const user = db.getUser(msg.sender);
     const username = user?.name || 'usuario';
     const botname = settings.botname || 'Bot';
     const basePrompt = `Tu nombre es ${botname} y parece haber sido creada por ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜. Tu versión actual es @latest, Tú usas el idioma Español. Llamarás a las personas por su nombre ${username}, te gusta ser divertida, y te encanta aprender. Lo más importante es que debes ser amigable con la persona con la que estás hablando. ${username}`;

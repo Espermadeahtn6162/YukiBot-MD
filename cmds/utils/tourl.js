@@ -1,5 +1,6 @@
 import FormData from 'form-data';
 import axios from 'axios';
+import db from '#db';
 
 const generateUniqueFilename = (mime) => {
   const ext = (mime || 'image/jpeg').split('/')[1]?.split(';')[0] || 'jpg';
@@ -76,7 +77,7 @@ export default {
       }
       if (!servers[serverArg]) return sock.reply(msg.chat, `ꕥ Servidor no válido. Usa: catbox, quax, uguu o auto`, msg)
       const { link, server } = await servers[serverArg]()
-      const user = global.db.data.users[msg.sender]
+      const user = db.getUser(msg.sender)
       await sock.reply(msg.chat, `𖹭 ❀ *Upload To ${server.toUpperCase()}*\n\nׅ  ׄ  ✿   ׅ り *Link ›* ${link}\nׅ  ׄ  ✿   ׅ り *Peso ›* ${formatBytes(media.length)}\nׅ  ׄ  ✿   ׅ り *Tipo ›* ${mime.split("/")[1].toUpperCase() || "UNKNOWN"}\nׅ  ׄ  ✿   ׅ り *Solicitado por ›* ${user?.name || msg.pushName || 'Usuario'}`, msg);
     } catch (e) {
       await sock.reply(msg.chat, `> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`, msg);
