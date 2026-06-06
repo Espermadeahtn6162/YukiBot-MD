@@ -1,6 +1,5 @@
 import yts from 'yt-search'
 import fetch from 'node-fetch'
-import { extractImageThumb } from 'baileys'
 
 const cmd = {
   command: ['play2', 'mp4', 'ytmp4', 'ytvideo', 'playvideo'],
@@ -33,7 +32,7 @@ const cmd = {
           thumbnail = video_info.image || video_info.thumbnail || null
           channel = video_info.author?.name || video_info.author || 'Desconocido'
           duration = video_info.timestamp || 'Desconocido'
-          views = (video_info.views || 0).toLocaleString()
+          views = Number(video_info.views || 0).toLocaleString('es-HN')
           published = video_info.ago || 'Desconocido'
 
           const info_message = `➩ Descargando › *${title}*
@@ -42,7 +41,7 @@ const cmd = {
 > ⴵ Duración › *${duration}*
 > ❀ Vistas › *${views}*
 > ✩ Publicado › *${published}*
-> ❒ Calidad › *${download_quality}p*
+> ❒ Calidad › *${download_quality}*
 > ❒ Enlace › *${url}*`
 
           if (thumbnail) {
@@ -60,25 +59,38 @@ const cmd = {
         return msg.reply('《✧》No encontré un video válido de YouTube.')
       }
 
-      const video = await getVideoFromCnv(url)
+      let video = null
+
+      try {
+        video = await getVideoFromYtdown(url)
+      } catch (e) {
+        return msg.reply(`《✧》No se pudo descargar el *video*, intenta más tarde.\n> ${e.message}`)
+      }
 
       if (!video?.url) {
         return msg.reply('《✧》No se pudo descargar el *video*, intenta más tarde.')
       }
 
-      const file_size = await getRemoteFileSize(video.url).catch(() => null)
-      const file_name = sanitizeFileName(video.filename || video.title || title) + '.mp4'
-      const thumb_buffer = await makeJpegThumbnail(thumbnail).catch(() => null)
+      title = video.title || title
+      channel = video.channel || channel
+      duration = video.duration || duration
+      thumbnail = thumbnail || video.thumbnail || makeYoutubeThumbnail(video.video_id || getVideoId(url))
 
-      const size_text = file_size ? formatBytes(file_size) : 'Desconocido'
+      const file_size = video.size_bytes || parseFileSize(video.size)
+      const size_text = file_size ? formatBytes(file_size) : (video.size || 'Desconocido')
       const send_as_document = file_size ? file_size > max_video_size : false
+      const file_name = sanitizeFileName(video.filename || video.title || title) + '.mp4'
 
       const caption = `乂 *Video descargado*
 
-> ❒ Calidad › *${video.quality || `${download_quality}p`}*
+> ❖ Canal › *${channel}*
+> ⴵ Duración › *${duration}*
+> ❒ Calidad › *${video.quality || download_quality}*
 > ❒ Tamaño › *${size_text}*`
 
       if (send_as_document) {
+        const thumb_buffer = await makeJpegThumbnail(thumbnail).catch(() => null)
+
         await sendVideoAsDocument(sock, msg, video.url, file_name, caption, thumb_buffer)
         return
       }
@@ -88,13 +100,13 @@ const cmd = {
           video: { url: video.url },
           fileName: file_name,
           mimetype: 'video/mp4',
-          caption,
-          ...(thumb_buffer ? { jpegThumbnail: thumb_buffer } : {})
+          caption
         }, { quoted: msg })
-      } catch (e) {
+      } catch {
+        const thumb_buffer = await makeJpegThumbnail(thumbnail).catch(() => null)
+
         await sendVideoAsDocument(sock, msg, video.url, file_name, caption, thumb_buffer)
       }
-
     } catch (e) {
       await msg.reply(
         `> An unexpected error occurred while executing command *${usedPrefix + command}*.\n> [Error: *${e.message}*]`
@@ -105,63 +117,69 @@ const cmd = {
 
 export default cmd
 
-const download_quality = '720'
+const download_quality = '720p'
 const max_video_size = 68 * 1024 * 1024
 
-const endpoints = {
-  key: 'https://cnv.cx/v2/sanity/key',
-  converter: 'https://cnv.cx/v2/converter'
+const config = {
+  timeout: 45000,
+  poll_attempts: 30,
+  poll_delay: 1500
 }
 
-const frame = {
-  origin: 'https://frame.y2meta-uk.com',
-  referer: 'https://frame.y2meta-uk.com/'
+const endpoints = {
+  proxy: 'https://app.ytdown.to/proxy.php'
+}
+
+const page = {
+  origin: 'https://app.ytdown.to',
+  referer: 'https://app.ytdown.to/es29/'
 }
 
 const defaults = {
-  format: 'mp4',
-  audio_bitrate: '128',
-  filename_style: 'pretty',
-  v_codec: 'h264',
-  timeout: 45000,
   user_agent:
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
 }
 
 const headers = {
-  common() {
+  proxy() {
     return {
       accept: '*/*',
-      origin: frame.origin,
-      referer: frame.referer,
-      'user-agent': defaults.user_agent,
+      'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
+      'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      origin: page.origin,
+      referer: page.referer,
       'sec-fetch-dest': 'empty',
       'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'cross-site'
+      'sec-fetch-site': 'same-origin',
+      'user-agent': defaults.user_agent,
+      'x-requested-with': 'XMLHttpRequest'
     }
   },
 
-  key() {
+  image() {
     return {
-      ...this.common(),
-      'content-type': 'application/json'
-    }
-  },
-
-  converter(key) {
-    return {
-      ...this.common(),
-      key,
-      'content-type': 'application/x-www-form-urlencoded'
+      accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      'user-agent': defaults.user_agent
     }
   }
 }
 
-class YtdlCnv {
+class Ytdown {
   constructor(options = {}) {
     this.url = options.url || ''
-    this.quality = String(options.quality || download_quality)
-    this.timeout = Number(options.timeout || defaults.timeout)
+    this.quality = this.normalizeQuality(options.quality || download_quality)
+    this.timeout = Number(options.timeout || config.timeout)
+    this.poll_attempts = Number(options.poll_attempts || config.poll_attempts)
+    this.poll_delay = Number(options.poll_delay || config.poll_delay)
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  normalizeQuality(quality) {
+    const value = String(quality || '').toLowerCase().trim()
+    return value.endsWith('p') ? value : `${value}p`
   }
 
   extractVideoId(input) {
@@ -200,15 +218,16 @@ class YtdlCnv {
 
     const match = text.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/|\/v\/)([a-zA-Z0-9_-]{11})/)
 
-    if (match) {
-      return match[1]
-    }
-
-    throw new Error('No se encontró un video_id válido de YouTube')
+    return match?.[1] || null
   }
 
   normalizeUrl(input) {
     const video_id = this.extractVideoId(input)
+
+    if (!video_id) {
+      throw new Error('No se encontró un video_id válido')
+    }
+
     return `https://youtu.be/${video_id}`
   }
 
@@ -236,65 +255,146 @@ class YtdlCnv {
     try {
       return JSON.parse(text)
     } catch {
-      throw new Error(`Respuesta inválida: ${text.slice(0, 300)}`)
+      throw new Error(`Respuesta JSON inválida: ${text.slice(0, 300)}`)
     }
   }
 
-  async getKey() {
-    const response = await this.fetchTimeout(endpoints.key, {
-      method: 'GET',
-      headers: headers.key()
-    })
+  async request(url) {
+    const body = new URLSearchParams({ url })
 
-    const json = await this.parseJson(response)
-
-    if (!json?.key) {
-      throw new Error('La API no devolvió key')
-    }
-
-    return json.key
-  }
-
-  async convert(input = this.url) {
-    const key = await this.getKey()
-    const source = this.normalizeUrl(input)
-
-    const body = new URLSearchParams({
-      link: source,
-      format: defaults.format,
-      audioBitrate: defaults.audio_bitrate,
-      videoQuality: this.quality,
-      filenameStyle: defaults.filename_style,
-      vCodec: defaults.v_codec
-    })
-
-    const response = await this.fetchTimeout(endpoints.converter, {
+    const response = await this.fetchTimeout(endpoints.proxy, {
       method: 'POST',
-      headers: headers.converter(key),
+      headers: headers.proxy(),
       body
     })
 
-    const json = await this.parseJson(response)
+    return await this.parseJson(response)
+  }
 
-    if (!json?.url) {
-      throw new Error('No se recibió url de descarga')
+  getApi(json) {
+    if (!json?.api) {
+      throw new Error('La respuesta no contiene api')
     }
 
+    return json.api
+  }
+
+  findQuality(items = []) {
+    const videos = items.filter(item => String(item?.type || '').toLowerCase() === 'video')
+
+    const selected = videos.find(item => {
+      const media_url = String(item?.mediaUrl || '').toLowerCase()
+      const media_res = String(item?.mediaRes || '').toLowerCase()
+      const media_quality = String(item?.mediaQuality || '').toLowerCase()
+
+      return (
+        media_url.endsWith(`/${this.quality}`) ||
+        media_res.endsWith(`x${this.quality.replace('p', '')}`) ||
+        media_quality === this.quality
+      )
+    })
+
+    if (!selected) {
+      const available = videos.map(item => ({
+        quality: String(item?.mediaUrl || '').split('/').pop() || null,
+        resolution: item?.mediaRes || null,
+        size: item?.mediaFileSize || null
+      }))
+
+      throw new Error(`No se encontró la calidad ${this.quality}. Disponibles: ${JSON.stringify(available)}`)
+    }
+
+    return selected
+  }
+
+  async info(input = this.url) {
+    const source = this.normalizeUrl(input)
+    const json = await this.request(source)
+    const api = this.getApi(json)
+
+    if (api.status !== 'ok') {
+      throw new Error(api.message || `Estado inválido: ${api.status}`)
+    }
+
+    const media = this.findQuality(api.mediaItems)
+
     return {
-      status: true,
-      result: {
-        source,
-        quality: `${this.quality}p`,
-        format: defaults.format,
-        filename: cleanExtension(json.filename || null),
-        download: json.url
-      }
+      source,
+      video_id: api.id || this.extractVideoId(source),
+      title: api.title || null,
+      thumbnail: api.imagePreviewUrl || media.mediaThumbnail || null,
+      duration: media.mediaDuration || null,
+      channel: api.userInfo?.name || null,
+      quality: this.quality,
+      media
     }
   }
 
-  async run() {
+  async resolve(media_url) {
+    let last = null
+
+    for (let i = 0; i < this.poll_attempts; i++) {
+      const json = await this.request(media_url)
+      const api = this.getApi(json)
+
+      last = api
+
+      if (api.status === 'completed' && api.fileUrl && /^https?:\/\//i.test(api.fileUrl)) {
+        const size_bytes =
+          parseFileSize(api.fileSizeBytes) ||
+          parseFileSize(api.fileSize) ||
+          parseFileSize(api.estimatedFileSize)
+
+        return {
+          file_name: api.fileName || null,
+          file_size: api.fileSize || api.estimatedFileSize || (size_bytes ? formatBytes(size_bytes) : null),
+          file_size_bytes: size_bytes,
+          download: api.fileUrl,
+          view: api.viewUrl || null,
+          progress: api.progress || api.percent || 'Completed'
+        }
+      }
+
+      if (api.status === 'failed' || api.status === 'error') {
+        throw new Error(api.message || 'La conversión falló')
+      }
+
+      await this.sleep(this.poll_delay)
+    }
+
+    throw new Error(`Tiempo agotado esperando descarga. Último estado: ${JSON.stringify(last)}`)
+  }
+
+  async run(input = this.url) {
     try {
-      return await this.convert(this.url)
+      const data = await this.info(input)
+      const file = await this.resolve(data.media.mediaUrl)
+
+      const size_bytes =
+        file.file_size_bytes ||
+        parseFileSize(file.file_size) ||
+        parseFileSize(data.media.mediaFileSize)
+
+      const format = String(data.media.mediaExtension || 'mp4').replace(/^\./, '').toLowerCase()
+
+      return {
+        status: true,
+        result: {
+          source: data.source,
+          video_id: data.video_id,
+          title: data.title,
+          channel: data.channel,
+          thumbnail: data.thumbnail,
+          duration: data.duration,
+          quality: data.quality,
+          format,
+          size: file.file_size || data.media.mediaFileSize || (size_bytes ? formatBytes(size_bytes) : null),
+          size_bytes,
+          filename: file.file_name || data.title,
+          download: file.download,
+          view: file.view
+        }
+      }
     } catch (error) {
       return {
         status: false,
@@ -308,7 +408,7 @@ const isYTUrl = (url = '') =>
   /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i.test(url)
 
 const getVideoId = (text = '') => {
-  const match = text.match(
+  const match = String(text).match(
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
   )
 
@@ -347,8 +447,8 @@ async function getVideoInfo(input, video_id) {
   return video || null
 }
 
-async function getVideoFromCnv(url) {
-  const client = new YtdlCnv({
+async function getVideoFromYtdown(url) {
+  const client = new Ytdown({
     url,
     quality: download_quality
   })
@@ -361,11 +461,18 @@ async function getVideoFromCnv(url) {
 
   return {
     url: res.result.download,
-    title: res.result.filename || null,
-    filename: res.result.filename || null,
-    quality: res.result.quality || `${download_quality}p`,
+    title: res.result.title || null,
+    channel: res.result.channel || null,
+    thumbnail: res.result.thumbnail || null,
+    duration: res.result.duration || null,
+    video_id: res.result.video_id || null,
+    filename: res.result.filename || res.result.title || null,
+    quality: res.result.quality || download_quality,
     format: res.result.format || 'mp4',
-    source: res.result.source || url
+    size: res.result.size || null,
+    size_bytes: res.result.size_bytes || null,
+    source: res.result.source || url,
+    view: res.result.view || null
   }
 }
 
@@ -373,73 +480,21 @@ async function makeJpegThumbnail(thumbnail) {
   if (!thumbnail) return null
 
   const res = await fetch(thumbnail, {
-    headers: {
-      'user-agent': defaults.user_agent
-    }
+    headers: headers.image()
   })
 
   if (!res.ok) {
     throw new Error(`No se pudo descargar miniatura: HTTP ${res.status}`)
   }
 
-  const image = Buffer.from(await res.arrayBuffer())
-  const { buffer } = await extractImageThumb(image, 300)
+  const buffer = Buffer.from(await res.arrayBuffer())
 
-  return buffer
+  return buffer.length ? buffer : null
 }
 
-async function getRemoteFileSize(url) {
-  const head = await requestFileSize(url, 'HEAD')
-
-  if (head) {
-    return head
-  }
-
-  return await requestFileSize(url, 'GET')
-}
-
-async function requestFileSize(url, method = 'HEAD') {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000)
-
-  try {
-    const res = await fetch(url, {
-      method,
-      signal: controller.signal,
-      headers: {
-        'user-agent': defaults.user_agent,
-        ...(method === 'GET' ? { range: 'bytes=0-0' } : {})
-      }
-    })
-
-    const content_range = res.headers.get('content-range')
-    const content_length = res.headers.get('content-length')
-
-    if (typeof res.body?.destroy === 'function') {
-      res.body.destroy()
-    }
-
-    if (content_range) {
-      const match = content_range.match(/\/(\d+)$/)
-      const total = Number(match?.[1] || 0)
-
-      if (total > 0) {
-        return total
-      }
-    }
-
-    const length = Number(content_length || 0)
-
-    if (length > 0 && res.status !== 206) {
-      return length
-    }
-
-    return null
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timer)
-  }
+function makeYoutubeThumbnail(video_id) {
+  if (!video_id) return null
+  return `https://i.ytimg.com/vi/${video_id}/hqdefault.jpg`
 }
 
 async function sendVideoAsDocument(sock, msg, url, fileName, caption, jpegThumbnail) {
@@ -450,6 +505,47 @@ async function sendVideoAsDocument(sock, msg, url, fileName, caption, jpegThumbn
     caption,
     ...(jpegThumbnail ? { jpegThumbnail } : {})
   }, { quoted: msg })
+}
+
+function parseFileSize(size) {
+  if (size === null || typeof size === 'undefined') return null
+
+  if (typeof size === 'number') {
+    return Number.isFinite(size) && size > 0 ? Math.round(size) : null
+  }
+
+  const raw = String(size).trim()
+  if (!raw) return null
+
+  const match = raw.match(/([\d.,]+)\s*(bytes?|b|kb|kib|mb|mib|gb|gib)?/i)
+  if (!match) return null
+
+  let value_text = match[1]
+
+  if (value_text.includes(',') && value_text.includes('.')) {
+    value_text = value_text.replace(/,/g, '')
+  } else {
+    value_text = value_text.replace(',', '.')
+  }
+
+  const value = Number(value_text)
+  if (!Number.isFinite(value) || value <= 0) return null
+
+  const unit = String(match[2] || 'b').toLowerCase()
+
+  const multipliers = {
+    b: 1,
+    byte: 1,
+    bytes: 1,
+    kb: 1024,
+    kib: 1024,
+    mb: 1024 ** 2,
+    mib: 1024 ** 2,
+    gb: 1024 ** 3,
+    gib: 1024 ** 3
+  }
+
+  return Math.round(value * (multipliers[unit] || 1))
 }
 
 function formatBytes(bytes = 0) {
