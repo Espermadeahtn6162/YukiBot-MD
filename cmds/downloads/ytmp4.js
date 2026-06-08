@@ -6,6 +6,7 @@ const cmd = {
   command: ['play2', 'mp4', 'ytmp4', 'ytvideo', 'playvideo'],
   category: 'downloads',
   description: 'Descargar un vídeo de YouTube.',
+
   run: async ({ msg, sock, args, usedPrefix, command }) => {
     try {
       if (!args[0]) {
@@ -89,16 +90,18 @@ const cmd = {
 > ❒ Calidad › *${video.quality || download_quality}*
 > ❒ Tamaño › *${size_text}*`
 
+      const video_url = proxyUrl(video.url)
+
       if (send_as_document) {
         const thumb_buffer = await makeJpegThumbnail(thumbnail, final_video_id).catch(() => null)
 
-        await sendVideoAsDocument(sock, msg, video.url, file_name, caption, thumb_buffer)
+        await sendVideoAsDocument(sock, msg, video_url, file_name, caption, thumb_buffer)
         return
       }
 
       try {
         await sock.sendMessage(msg.chat, {
-          video: { url: video.url },
+          video: { url: video_url },
           fileName: file_name,
           mimetype: 'video/mp4',
           caption
@@ -106,7 +109,7 @@ const cmd = {
       } catch {
         const thumb_buffer = await makeJpegThumbnail(thumbnail, final_video_id).catch(() => null)
 
-        await sendVideoAsDocument(sock, msg, video.url, file_name, caption, thumb_buffer)
+        await sendVideoAsDocument(sock, msg, video_url, file_name, caption, thumb_buffer)
       }
     } catch (e) {
       await msg.reply(
@@ -120,6 +123,28 @@ export default cmd
 
 const download_quality = '360p'
 const max_video_size = 50 * 1024 * 1024
+
+const proxy_base = 'https://api.nazirr.space/proxy/'
+
+if (typeof globalThis.useProxy === 'undefined') {
+  globalThis.useProxy = true
+}
+
+if (!globalThis.proxyUrl) {
+  globalThis.proxyUrl = proxy_base
+}
+
+const proxyUrl = (url = '') => {
+  if (!url) return url
+
+  const enabled = globalThis.useProxy !== false
+  const base = String(globalThis.proxyUrl || proxy_base)
+
+  if (!enabled) return url
+  if (url.startsWith(base)) return url
+
+  return `${base}${url}`
+}
 
 const youtubei = {
   endpoint: 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false',
@@ -203,7 +228,9 @@ async function getVideoFromYoutubei(url) {
     throw new Error('No se encontró un video_id válido')
   }
 
-  const response = await fetch(youtubei.endpoint, {
+  const target_url = proxyUrl(youtubei.endpoint)
+
+  const response = await fetch(target_url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -267,7 +294,7 @@ async function getVideoFromYoutubei(url) {
 }
 
 async function getRemoteFileSize(url) {
-  const response = await fetch(url, {
+  const response = await fetch(proxyUrl(url), {
     method: 'HEAD',
     headers: {
       'user-agent': defaults.user_agent
@@ -333,7 +360,7 @@ function makeYoutubeThumbnail(video_id, quality = 'hqdefault') {
 
 async function sendVideoAsDocument(sock, msg, url, fileName, caption, jpegThumbnail) {
   await sock.sendMessage(msg.chat, {
-    document: { url },
+    document: { url: proxyUrl(url) },
     mimetype: 'video/mp4',
     fileName,
     caption,
