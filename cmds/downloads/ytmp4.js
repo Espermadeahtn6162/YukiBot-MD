@@ -119,7 +119,7 @@ const cmd = {
 export default cmd
 
 const download_quality = '360p'
-const max_video_size = 68 * 1024 * 1024
+const max_video_size = 50 * 1024 * 1024
 
 const youtubei = {
   endpoint: 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false',
