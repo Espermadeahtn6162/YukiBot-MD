@@ -22,7 +22,8 @@ const log = {
   error: (msg) => console.log(chalk.bgRed.white.bold(`ERROR`), chalk.redBright(msg))
 };
 
-let phoneNumber = "";
+// ─── CONFIGURACIÓN AUTOMÁTICA ADAPTADA PARA LA NUBE ───
+let phoneNumber = global.pairingNumber || "584121911525";
 let phoneInput = "";
 const methodCodeQR = process.argv.includes("--qr");
 const methodCode = process.argv.includes("code");
@@ -115,28 +116,9 @@ function clearSession() {
   }
 }
 
-let opcion;
-if (methodCodeQR) {
-  opcion = "1";
-} else if (methodCode) {
-  opcion = "2";
-  if (!phoneNumber) {
-    console.log(chalk.bold.redBright(`\nPor favor, Ingrese el número de WhatsApp.\n${chalk.bold.yellowBright("Ejemplo: +57301******")}\n${chalk.bold.magentaBright('---> ')}`));
-    phoneInput = readlineSync.question("");
-    phoneNumber = normalizePhone(phoneInput);
-  }
-} else if (!fs.existsSync("./Sessions/Owner/creds.json")) {
-  opcion = readlineSync.question(chalk.bold.white("\nSeleccione una opción:\n") + chalk.blueBright("1. Con código QR\n") + chalk.cyan("2. Con código de texto de 8 dígitos\n--> "));
-  while (!/^[1-2]$/.test(opcion)) {
-    console.log(chalk.bold.redBright(`No se permiten numeros que no sean 1 o 2, tampoco letras o símbolos especiales.`));
-    opcion = readlineSync.question("--> ");
-  }
-  if (opcion === "2") {
-    console.log(chalk.bold.redBright(`\nPor favor, Ingrese el número de WhatsApp.\n${chalk.bold.yellowBright("Ejemplo: +57301******")}\n${chalk.bold.magentaBright('---> ')}`));
-    phoneInput = readlineSync.question("");
-    phoneNumber = normalizePhone(phoneInput);
-  }
-}
+// Se fuerza la opción de código de texto de forma automática sin pedir interacción por consola
+let opcion = "2"; 
+phoneNumber = normalizePhone(phoneNumber);
 
 let bootTime = Date.now();
 let reconexion = 0;
