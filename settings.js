@@ -4,6 +4,10 @@ import { fileURLToPath } from "url";
 
 global.owner = ['573196588149', '50498273976'];
 
+// ─── CONFIGURACIÓN AUTOMÁTICA PARA EL BOT ───
+global.pairingNumber = "584121911525"; 
+// ────────────────────────────────────────────
+
 global.dev = "© ⍴᥆ᥕᥱrᥱძ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜";
 global.links = {
   api: 'https://api.yuki-wabot.my.id',
