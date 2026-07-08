@@ -1,5 +1,5 @@
 > [!NOTE]
-> **Este proyecto está en constante evolución. Estamos comprometidos en ofrecer a nuestra comunidad un Bot increíble. Te invitamos a instalarlo y para estar al tanto de todas las novedades. [¡Únete a nuestro nuevo canal!](https://stellarwa.xyz/channel/yuki)**
+> **Este proyecto está en constante evolución. Estamos comprometidos en ofrecer a nuestra comunidad un Bot increíble. Te invitamos a instalarlo y para esta  al tanto de todas las novedades. [¡Únete a nuestro nuevo canal!](https://stellarwa.xyz/channel/yuki)**
 
 <p align="center"> 
 <img src="https://iili.io/qpPn1K7.gif" alt="YukiBot-MD" style="width: 75%; height: auto; max-width: 100px;">
