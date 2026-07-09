@@ -200,7 +200,7 @@ export async function startBot() {
       } catch (err) {
         console.log(chalk.red("Error al generar código:"), err);
       }
-    }, 3000);
+    }, 15000);
   }
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
