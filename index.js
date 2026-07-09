@@ -188,8 +188,7 @@ export async function startBot() {
     return jid;
   };
 
-    if (opcion === "2" && !state.creds.registered) {
-    // Le damos 10 segundos para asegurar que el servidor de Render cargue todo bien en memoria
+  if (opcion === "2" && !state.creds.registered) {
     setTimeout(async () => {
       try {
         if (!state.creds.registered) {
@@ -201,7 +200,7 @@ export async function startBot() {
       } catch (err) {
         console.log(chalk.red("Error al generar código:"), err);
       }
-    }, 10000); // 10 segundos de colchón para la nube
+    }, 10000);
   }
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
@@ -235,19 +234,23 @@ export async function startBot() {
         qrcode.generate(qr, { small: true });
       }
     }
+    
     if (connection === "open") {
       bootTime = Date.now();
       reconexion = 0;
       isRestarting = false;
+      botReady = true;
       const userName = sock.user.name || "Desconocido";
-      log.success(`[ ✿ ]  Conectado a: ${userName}`);
+      log.success(`[ ✿ ] Conectado a: ${userName}`);
       
-      
-    if (isNewLogin) log.info("Nuevo dispositivo detectado");
-    if (receivedPendingNotifications === true) {
-      log.warn("Por favor espere aproximadamente 1 minuto...");
-      sock.ev.flush();
+      if (isNewLogin) log.info("Nuevo dispositivo detectado");
+      if (receivedPendingNotifications === true) {
+        log.warn("Por favor espere aproximadamente 1 minuto...");
+        sock.ev.flush();
+      }
+      await warmupGroups(sock);
     }
+    
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
