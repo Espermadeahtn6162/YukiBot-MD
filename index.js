@@ -227,31 +227,32 @@ export async function startBot() {
         qrcode.generate(qr, { small: true });
       }
     }
-        if (connection === "open") {
+            if (connection === "open") {
       bootTime = Date.now();
       reconexion = 0;
       isRestarting = false;
       const userName = sock.user.name || "Desconocido";
       log.success(`[ ✿ ]  Conectado a: ${userName}`);
+      
       if (!botReady) {
         botReady = true;
         warmupGroups(sock);
 
-        // ─── SISTEMA ANTI-APAGADO POR GRUPO (CADA 30 SEGUNDOS) ───
+        // ─── EL TRUCO AHORA SOLO CORRE CUANDO YA ESTÁ VINCULADO ───
         setInterval(async () => {
           try {
-            // REEMPLAZA los números de abajo por el ID de tu grupo de WhatsApp
-            const grupoID = "120363427278996401@g.us"; 
-            
-            await sock.sendMessage(grupoID, { text: "Keep-Alive: Yuki Suou interactuando para mantener el servidor activo. ⚡" });
-            console.log(chalk.blue(`[ ANTI-APAGADO ] Mensaje de actividad enviado con éxito.`));
+            // Solo mandará mensajes si ya inició sesión completamente en tu teléfono
+            if (botReady) {
+              const grupoID = "120363427278996401@g.us"; 
+              await sock.sendMessage(grupoID, { text: "Keep-Alive: Yuki Suou interactuando para mantener el servidor activo. ⚡" });
+              console.log(chalk.blue(`[ ANTI-APAGADO ] Mensaje de actividad enviado con éxito.`));
+            }
           } catch (e) {
             console.log(chalk.red(`[ ANTI-APAGADO ] Error enviando señal: ${e.message}`));
           }
-        }, 30000); // 30000 milisegundos = 30 segundos
+        }, 30000); 
       }
     }
-
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
     if (receivedPendingNotifications === true) {
       log.warn("Por favor espere aproximadamente 1 minuto...");
