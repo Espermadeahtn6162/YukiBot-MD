@@ -22,7 +22,6 @@ const log = {
   error: (msg) => console.log(chalk.bgRed.white.bold(`ERROR`), chalk.redBright(msg))
 };
 
-// ─── CONFIGURACIÓN AUTOMÁTICA ADAPTADA PARA LA NUBE ───
 let phoneNumber = global.pairingNumber || "584121911525";
 let phoneInput = "";
 const methodCodeQR = process.argv.includes("--qr");
@@ -37,17 +36,17 @@ function normalizePhone(input) {
   return s;
 }
 
-const { say } = cfonts
-console.log(chalk.magentaBright('\n❀ Iniciando...'))
-  say('Yuki Suou', {
+const { say } = cfonts;
+console.log(chalk.magentaBright('\n❀ Iniciando...'));
+say('Yuki Suou', {
   align: 'center',           
   gradient: ['red', 'blue'] 
-})
-  say('Made with love by Destroy', {
+});
+say('Made with love by Destroy', {
   font: 'console',
   align: 'center',
   gradient: ['blue', 'magenta']
-})
+});
 
 const botTypes = [
   { name: 'SubBot', folder: './Sessions/Subs', starter: startSubBot },
@@ -73,7 +72,7 @@ async function loadBots() {
         await starter(null, null, '', false, userId, '');
       } catch (e) {
         console.log(chalk.gray(`[ loadBots ] Error iniciando ${name} ${userId}: ${e?.message || e}`));
-        reconnecting.delete(userId);
+        reconnecting.add(userId);
       }
       await new Promise((res) => setTimeout(res, 2500));
     }
@@ -116,7 +115,6 @@ function clearSession() {
   }
 }
 
-// Se fuerza la opción de código de texto de forma automática sin pedir interacción por consola
 let opcion = "2"; 
 phoneNumber = normalizePhone(phoneNumber);
 
@@ -125,24 +123,27 @@ let reconexion = 0;
 let botReady = false;
 let isRestarting = false;
 const retriesLimit = 15;
+
 async function warmupGroups(sock) {
   try {
-    const allChats = db.getChat()
-    const chatIds = allChats.map(c => c.id).filter(id => typeof id === 'string' && id.endsWith('@g.us')).slice(0, 50)
-    if (!chatIds.length) return
-    console.log(chalk.gray(`[ ✿ ] Precargando metadata de ${chatIds.length} grupos...`))
-    const t = Date.now()
-    const batches = []
+    const allChats = db.getChat();
+    const chatIds = allChats.map(c => c.id).filter(id => typeof id === 'string' && id.endsWith('@g.us')).slice(0, 50);
+    if (!chatIds.length) return;
+    console.log(chalk.gray(`[ ✿ ] Precargando metadata de ${chatIds.length} grupos...`));
+    const t = Date.now();
+    const batches = [];
     for (let i = 0; i < chatIds.length; i += 10) {
-      batches.push(chatIds.slice(i, i + 10))
+      batches.push(chatIds.slice(i, i + 10));
     }
     await Promise.allSettled(batches.map(batch => Promise.allSettled(batch.map(async id => {
-    try {
-    const meta = await sock.groupMetadata(id)
-    if (meta) setCachedMeta(id, meta) } catch {}}))))
-    console.log(chalk.gray(`[ ✿ ] Warmup completado en ${Date.now() - t}ms`))
+      try {
+        const meta = await sock.groupMetadata(id);
+        if (meta) setCachedMeta(id, meta); 
+      } catch {}
+    }))));
+    console.log(chalk.gray(`[ ✿ ] Warmup completado en ${Date.now() - t}ms`));
   } catch (e) {
-    console.log(chalk.gray(`[ ✿ ] warmupGroups → ${e?.message || e}`))
+    console.log(chalk.gray(`[ ✿ ] warmupGroups → ${e?.message || e}`));
   }
 }
 
@@ -156,10 +157,11 @@ export async function startBot() {
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
   console.info = () => {};
   console.debug = () => {};
+  
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.macOS('Chrome'),
+    browser: ["Ubuntu", "Chrome", "20.0.04"], 
     printQRInTerminal: false,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
     markOnlineOnConnect: false,
@@ -227,7 +229,7 @@ export async function startBot() {
         qrcode.generate(qr, { small: true });
       }
     }
-            if (connection === "open") {
+    if (connection === "open") {
       bootTime = Date.now();
       reconexion = 0;
       isRestarting = false;
@@ -238,10 +240,9 @@ export async function startBot() {
         botReady = true;
         warmupGroups(sock);
 
-        // ─── EL TRUCO AHORA SOLO CORRE CUANDO YA ESTÁ VINCULADO ───
+        // ─── EVITAR APAGADO: MENSAJES CADA 30 SEGUNDOS TRAS VINCULARSE ───
         setInterval(async () => {
           try {
-            // Solo mandará mensajes si ya inició sesión completamente en tu teléfono
             if (botReady) {
               const grupoID = "120363427278996401@g.us"; 
               await sock.sendMessage(grupoID, { text: "Keep-Alive: Yuki Suou interactuando para mantener el servidor activo. ⚡" });
