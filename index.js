@@ -115,7 +115,7 @@ function clearSession() {
   }
 }
 
-let opcion = "2"; 
+let opcion = "1"; 
 phoneNumber = normalizePhone(phoneNumber);
 
 let bootTime = Date.now();
