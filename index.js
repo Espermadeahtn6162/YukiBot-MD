@@ -242,24 +242,7 @@ export async function startBot() {
       const userName = sock.user.name || "Desconocido";
       log.success(`[ ✿ ]  Conectado a: ${userName}`);
       
-      if (!botReady) {
-        botReady = true;
-        warmupGroups(sock);
-
-        // ─── EVITAR APAGADO: MENSAJES CADA 30 SEGUNDOS TRAS VINCULARSE ───
-        setInterval(async () => {
-          try {
-            if (botReady) {
-              const grupoID = "120363427278996401@g.us"; 
-              await sock.sendMessage(grupoID, { text: "Keep-Alive: Yuki Suou interactuando para mantener el servidor activo. ⚡" });
-              console.log(chalk.blue(`[ ANTI-APAGADO ] Mensaje de actividad enviado con éxito.`));
-            }
-          } catch (e) {
-            console.log(chalk.red(`[ ANTI-APAGADO ] Error enviando señal: ${e.message}`));
-          }
-        }, 30000); 
-      }
-    }
+      
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
     if (receivedPendingNotifications === true) {
       log.warn("Por favor espere aproximadamente 1 minuto...");
