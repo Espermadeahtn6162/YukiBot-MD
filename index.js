@@ -37,15 +37,15 @@ function normalizePhone(input) {
 }
 
 const { say } = cfonts;
-console.log(chalk.magentaBright('\n❀ Iniciando...'));
-say('Yuki Suou', {
+console.log(chalk.cyanBright('\n❀ ¡Iniciando mi propio sistema! ⚡'));
+say('Yuki Bot', {
   align: 'center',           
-  gradient: ['red', 'blue'] 
+  gradient: ['magenta', 'cyan'] 
 });
-say('Made with love by Destroy', {
+say('Personalizado por Daxer', {
   font: 'console',
   align: 'center',
-  gradient: ['blue', 'magenta']
+  gradient: ['cyan', 'blue']
 });
 
 const botTypes = [
@@ -184,10 +184,12 @@ export async function startBot() {
     return jid;
   };
 
-  if (opcion === "2" && !state.creds.registered) {
+    if (opcion === "2" && !state.creds.registered) {
+    // Le damos 10 segundos para asegurar que el servidor de Render cargue todo bien en memoria
     setTimeout(async () => {
       try {
         if (!state.creds.registered) {
+          console.log(chalk.yellow("[ ⚠ ] Solicitando código de emparejamiento a los servidores de WhatsApp..."));
           const pairing = await sock.requestPairingCode(phoneNumber);
           const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
           console.log(chalk.bold.white(chalk.bgMagenta(`Código de emparejamiento:`)), chalk.bold.white(chalk.white(codeBot)));
@@ -195,7 +197,7 @@ export async function startBot() {
       } catch (err) {
         console.log(chalk.red("Error al generar código:"), err);
       }
-    }, 3000);
+    }, 10000); // 10 segundos de colchón para la nube
   }
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
