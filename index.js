@@ -19,12 +19,6 @@ import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
 
-// Reiniciar el bot automáticamente cada 24 horas para limpiar la RAM
-setInterval(() => {
-    console.log("Reiniciando el bot para liberar memoria RAM...");
-    process.exit(0); 
-}, 24 * 60 * 60 * 1000);
-
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
   success: (msg) => console.log(chalk.bgGreen.white.bold(`SUCCESS`), chalk.greenBright(msg)),
