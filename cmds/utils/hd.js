@@ -29,9 +29,11 @@ export default {
         return msg.reply(`《✧》 El formato *${resolvedMime}* no es compatible`)
       const result = await vectorinkEnhanceFromBuffer(buffer, resolvedMime)
       if (!result?.ok || !result?.buffer) {
-        const msg = result?.error?.code || result?.error?.step || result?.error?.message || 'error desconocido'
-        return msg.reply(`《✧》 No se pudo *mejorar* la imagen (${msg})`)
-      }
+  // Le cambiamos el nombre a errorMsg para que no choque
+  const errorMsg = result?.error?.code || result?.error?.step || result?.error?.message || 'error desconocido'
+  return msg.reply(`《✧》 No se pudo *mejorar* la imagen (${errorMsg})`)
+}
+
       await sock.sendMessage(msg.chat, { image: result.buffer, caption: '' }, { quoted: msg })
     } catch (e) {
       console.error(e)
