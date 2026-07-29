@@ -51,7 +51,7 @@ export function iniciarAutomatizaciones(sock) {
   // FUNCIÓN ENVIAR SOLO AL GRUPO DE LOS INSANOS
   const enviarAlGrupoInsano = async (mensaje) => {
     try {
-      if (GRUPO_INSANOS_ID.includes('AQUI_VA_TU_ID')) {
+      if (GRUPO_INSANOS_ID.includes('120363424612325673@g.us')) {
         console.log('⚠️ Falta colocar el ID del grupo de los insanos en cronJobs.js');
         return;
       }
