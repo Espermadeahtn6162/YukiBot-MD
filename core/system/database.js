@@ -121,9 +121,9 @@ export const defSets = {
   link: 'https://api.yuki-wabot.my.id',
   banner: 'https://cdn.yuki-wabot.my.id/files/tCVD.jpeg',
   icon: 'https://cdn.yuki-wabot.my.id/files/4U5V.jpeg',
-  currency: 'Yenes',
-  namebot: 'Yuki',
-  botname: 'Yuki Suou',
+  currency: 'Dolares',
+  namebot: 'Nixy',
+  botname: 'Nixy Dax',
   owner: ''
 };
 
