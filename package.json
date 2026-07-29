@@ -1,7 +1,7 @@
 {
   "name": "NixyWabot",
   "version": "3.2",
-  "description": "WhatsApp multi Device, updated with better performance",
+  "description": "WhatsApp multidispositivo, actualizado con mejor rendimiento.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -17,15 +17,15 @@
     "#db": "./core/system/database.js"
   },
   "keywords": [
-    "whatsapp-bot",
-    "baileys-md",
-    "multi-device"
+    "bot de WhatsApp",
+    "Baileys-MD",
+    "multidispositivo"
   ],
   "author": "Daxer",
   "license": "MIT",
   "engines": {
     "node": ">=22.13.0",
-    "npm": ">=10.9.4"
+    "npm":">=10.9.4"
   },
   "dependencies": {
     "@vitalets/google-translate-api": "latest",
@@ -46,6 +46,7 @@
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.37",
     "node-cache": "latest",
+    "node-cron": "^3.0.3",
     "node-fetch": "^3.2.10",
     "node-webpmux": "^3.2.0",
     "pino": "^8.8.0",
