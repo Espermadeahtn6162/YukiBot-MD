@@ -3,42 +3,72 @@ import { translate } from '@vitalets/google-translate-api';
 export default {
   command: ['translate', 'trad', 'traducir'],
   category: 'utils',
-  description: 'Traducir texto al idioma especificado.',
+  description: 'Traducir texto al idioma especificado usando formato texto/idioma.',
   run: async ({ msg, sock, args, usedPrefix, command }) => {
     const defaultLang = 'es';
-    if (!args[0] && !msg.quoted) {
-      return msg.reply('《✧》 Ingresa el idioma seguido del texto que quieras traducir.');
-    }
-    let lang = args[0];
-    let text = '';
+    
+    // Mapeo de idiomas soportados (soporta el código de 2 letras y nombres comunes)
+    const languageMap = {
+      // Español
+      'es': 'es', 'spanish': 'es', 'español': 'es', 'espanol': 'es',
+      // Inglés
+      'en': 'en', 'english': 'en', 'ingles': 'en', 'inglés': 'en',
+      // Portugués
+      'pt': 'pt', 'portuguese': 'pt', 'portugues': 'pt', 'portugués': 'pt',
+      // Alemán
+      'de': 'de', 'german': 'de', 'aleman': 'de', 'alemán': 'de'
+    };
+
+    let fullInput = '';
+
+    // Si respondió a un mensaje
     if (msg.quoted) {
-      text = msg.quoted.text || msg.quoted.caption || msg.quoted.body || '';
-      if ((lang || '').length === 2 && args[1]) {
-        lang = args[0];
-        text = args.slice(1).join(' ') || text;
-      } else if ((lang || '').length !== 2) {
-        lang = defaultLang;
-        text = args.join(' ') || text;
+      fullInput = msg.quoted.text || msg.quoted.caption || msg.quoted.body || '';
+      // Si además de responder escribió algo en el comando (ej: .trad /en)
+      if (args.length > 0) {
+        fullInput = fullInput + ' ' + args.join(' ');
       }
     } else {
-      if ((lang || '').length === 2) {
-        text = args.slice(1).join(' ');
-      } else {
-        lang = defaultLang;
-        text = args.join(' ');
+      fullInput = args.join(' ');
+    }
+
+    if (!fullInput.trim()) {
+      return msg.reply('《✧》 Ingresa el texto a traducir. Ejemplo: *.trad Hola/en* o responde a un mensaje con *.trad /de*');
+    }
+
+    let textToTranslate = fullInput.trim();
+    let targetLang = defaultLang;
+
+    // Verificar si el texto contiene '/' para separar el texto del idioma
+    if (fullInput.includes('/')) {
+      const parts = fullInput.split('/');
+      // Lo que está después del último '/' es el idioma objetivo
+      const rawLang = parts.pop().trim().toLowerCase();
+      const possibleText = parts.join('/').trim();
+
+      if (rawLang && languageMap[rawLang]) {
+        targetLang = languageMap[rawLang];
+        textToTranslate = possibleText || (msg.quoted ? (msg.quoted.text || msg.quoted.caption || msg.quoted.body) : '');
+      } else if (rawLang.length === 2) {
+        // Si puso un código ISO de 2 letras que no está en el mapa, intentar usarlo directo
+        targetLang = rawLang;
+        textToTranslate = possibleText || (msg.quoted ? (msg.quoted.text || msg.quoted.caption || msg.quoted.body) : '');
       }
     }
-    if (!text.trim()) {
+
+    if (!textToTranslate || !textToTranslate.trim()) {
       return msg.reply('《✧》 No hay texto para traducir.');
     }
+
     try {
       await msg.react('🕒');
-      const result = await translate(text, { to: lang, autoCorrect: true });
+      const result = await translate(textToTranslate, { to: targetLang, autoCorrect: true });
+      
       await sock.sendMessage(msg.chat, { text: result.text }, { quoted: msg });
       await msg.react('✔️');
     } catch (e) {
       await msg.react('✖️');
-      await msg.reply(`> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`);
+      await msg.reply(`> Un error inesperado ocurrió al ejecutar el comando *${usedPrefix + command}*.\n> [Error: *${e.message}*]`);
     }
   },
 };
