@@ -42,7 +42,7 @@ function normalizePhone(input) {
 
 const { say } = cfonts;
 console.log(chalk.cyanBright('\n❀ ¡Iniciando mi propio sistema! ⚡'));
-say('Yuki Bot', {
+say('Nixy Bot', {
   align: 'center',           
   gradient: ['magenta', 'cyan'] 
 });
