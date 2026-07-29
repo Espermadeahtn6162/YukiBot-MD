@@ -16,7 +16,9 @@ export default {
       // Portugués
       'pt': 'pt', 'portuguese': 'pt', 'portugues': 'pt', 'portugués': 'pt',
       // Alemán
-      'de': 'de', 'german': 'de', 'aleman': 'de', 'alemán': 'de'
+      'de': 'de', 'german': 'de', 'aleman': 'de', 'alemán': 'de',
+      // Italiano
+      'it': 'it', 'italian': 'it', 'italiano': 'it'
     };
 
     let fullInput = '';
@@ -24,7 +26,7 @@ export default {
     // Si respondió a un mensaje
     if (msg.quoted) {
       fullInput = msg.quoted.text || msg.quoted.caption || msg.quoted.body || '';
-      // Si además de responder escribió algo en el comando (ej: .trad /en)
+      // Si además de responder escribió algo en el comando (ej: .trad /it)
       if (args.length > 0) {
         fullInput = fullInput + ' ' + args.join(' ');
       }
@@ -33,7 +35,7 @@ export default {
     }
 
     if (!fullInput.trim()) {
-      return msg.reply('《✧》 Ingresa el texto a traducir. Ejemplo: *.trad Hola/en* o responde a un mensaje con *.trad /de*');
+      return msg.reply('《✧》 Ingresa el texto a traducir. Ejemplo: *.trad Hola/it* o responde a un mensaje con *.trad /it*');
     }
 
     let textToTranslate = fullInput.trim();
