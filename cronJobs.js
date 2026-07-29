@@ -65,8 +65,8 @@ export function iniciarAutomatizaciones(sock) {
   // PROGRAMACIÓN DE HORARIOS (CRON)
   // ==========================================
 
-  // 🔥 12:00 AM — Hora de Proyectarse
-  cron.schedule('10 0 * * *', () => {
+  // 🔥 1:00 AM — Hora de Proyectarse
+  cron.schedule('0 1 * * *', () => {
     const frase = frasesProyeccion[Math.floor(Math.random() * frasesProyeccion.length)];
     enviarAlGrupoInsano(frase);
   }, { timezone: "America/Caracas" });
