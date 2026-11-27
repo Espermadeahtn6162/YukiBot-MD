@@ -14,7 +14,6 @@ const DEFAULT_COOLDOWNS = {
   stickers: { sticker: 5000, audiosticker: 10000, brat: 5000 },
 };
 
-// Alias resolution cache
 let aliasToPrimary = new Map();
 let lastCommandRevision = -1;
 
@@ -32,11 +31,13 @@ function buildAliasMap() {
     aliasToPrimary.set(alias, primary);
   }
   lastCommandRevision = currentRevision;
+  console.log(`[COOLDOWN] Alias map built: ${aliasToPrimary.size} entries, revision ${lastCommandRevision}`);
 }
 
 function getPrimaryCommand(command) {
   buildAliasMap();
-  return aliasToPrimary.get(command) || command;
+  const primary = aliasToPrimary.get(command) || command;
+  return primary;
 }
 
 function getCategoryFromCommand(command) {
@@ -55,7 +56,6 @@ function getCooldownMs(command) {
 }
 
 function getDbField(command) {
-  // Map comando -> campo DB existente
   const map = {
     work: 'lastwork', daily: 'lastdaily', weekly: 'lastweekly', monthly: 'lastmonthly',
     coinflip: 'lastcoinflip', crime: 'lastcrime', deposit: 'lastdeposit', withdraw: 'lastwithdraw',
@@ -77,64 +77,66 @@ function getDbField(command) {
 
 export function checkCooldown(command, userId) {
   const cooldownMs = getCooldownMs(command);
+  console.log(`[COOLDOWN] checkCooldown(${command}, ${userId}) -> cooldownMs: ${cooldownMs}`);
   if (!cooldownMs) return { allowed: true, remaining: 0 };
 
   const field = getDbField(command);
-  const user = db.getChatUser('', userId); // chat_id vacío para buscar solo por user_id? No, getChatUser requiere chat_id
-  // Usar getUser para campos globales, getChatUser para por chat
-  // Los cooldowns de economy son por chat, otros globales
-  // Simplificación: usar campo en users table si existe, sino chat_users
-  // Por ahora leer de la tabla users si el campo existe ahí
-  // Fallback: usar memoria + DB híbrido
-
-  const cacheKey = `cooldown:${command}:${userId}`;
   const now = Date.now();
 
-  // 1. Check memoria primero (rápido)
+  const cacheKey = `cooldown:${command}:${userId}`;
   if (global.cooldownCache?.has(cacheKey)) {
     const lastUsed = global.cooldownCache.get(cacheKey);
-    if (now - lastUsed < cooldownMs) {
-      return { allowed: false, remaining: cooldownMs - (now - lastUsed), cooldownMs };
+    if (now - lastUsed < getCooldownMs(command)) {
+      const remaining = getCooldownMs(command) - (now - lastUsed);
+      console.log(`[COOLDOWN] BLOCKED by memory cache, remaining: ${remaining}ms`);
+      return { allowed: false, remaining, cooldownMs: getCooldownMs(command) };
     }
   }
 
-  // 2. Check DB para comandos con campo conocido
   try {
     const userGlobal = db.getUser(userId);
+    const field = getDbField(command);
     if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
-      global.cooldownCache = global.cooldownCache || new Map();
-      global.cooldownCache.set(cacheKey, userGlobal[field] - cooldownMs); // approx
-      return { allowed: false, remaining: userGlobal[field] - now, cooldownMs };
+      if (!global.cooldownCache) global.cooldownCache = new Map();
+      global.cooldownCache.set(`cooldown:${command}:${userId}`, userGlobal[field] - getCooldownMs(command));
+      const remaining = userGlobal[field] - now;
+      console.log(`[COOLDOWN] BLOCKED by DB (${field}=${userGlobal[field]}), remaining: ${remaining}ms`);
+      return { allowed: false, remaining, cooldownMs: getCooldownMs(command) };
     }
-  } catch {}
+  } catch (e) {
+    console.log(`[COOLDOWN] DB check error: ${e.message}`);
+  }
 
-  return { allowed: true, remaining: 0, cooldownMs };
+  console.log(`[COOLDOWN] ALLOWED`);
+  return { allowed: true, remaining: 0, cooldownMs: getCooldownMs(command) };
 }
 
 export function setCooldown(command, userId) {
   const cooldownMs = getCooldownMs(command);
+  console.log(`[COOLDOWN] setCooldown(${command}, ${userId}) -> cooldownMs: ${cooldownMs}`);
   if (!cooldownMs) return;
 
   const field = getDbField(command);
   const now = Date.now();
   const expiry = now + cooldownMs;
 
-  // 1. Memoria
   const cacheKey = `cooldown:${command}:${userId}`;
   global.cooldownCache = global.cooldownCache || new Map();
   global.cooldownCache.set(cacheKey, now);
+  console.log(`[COOLDOWN] Memory cache SET: ${cacheKey} = ${now}`);
 
-  // 2. DB (persistente)
   try {
-    // Intentar actualizar en users table
     const userGlobal = db.getUser(userId);
+    const field = getDbField(command);
     if (userGlobal && Object.prototype.hasOwnProperty.call(userGlobal, field)) {
-      db.setUser(userId, field, expiry);
-      return;
+      db.setUser(userId, field, now + cooldownMs);
+      console.log(`[COOLDOWN] DB SET: ${field} = ${now + cooldownMs} for user ${userId}`);
+    } else {
+      console.log(`[COOLDOWN] Field ${field} not found in userGlobal, skipping DB`);
     }
-    // Si no existe en users, intentar chat_users (necesita chat_id - no disponible aquí)
-    // Para comandos globales, usar users. Para por chat, el comando debe manejar su propio campo DB
-  } catch {}
+  } catch (e) {
+    console.log(`[COOLDOWN] DB set error: ${e.message}`);
+  }
 }
 
 export function getCooldownRemaining(command, userId) {
@@ -174,7 +176,6 @@ export function getAllCooldowns() {
   return DEFAULT_COOLDOWNS;
 }
 
-// Export para debug
 export function getDebugInfo() {
   buildAliasMap();
   return {
