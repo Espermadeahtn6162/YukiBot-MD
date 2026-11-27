@@ -244,6 +244,20 @@ export function initDB() {
     )`);
   db.exec(`CREATE TABLE IF NOT EXISTS characters (id TEXT PRIMARY KEY, data TEXT)`);
   db.exec(`CREATE TABLE IF NOT EXISTS sticker_packs (id TEXT PRIMARY KEY, packs TEXT DEFAULT '[]')`);
+
+  // Índices para queries frecuentes (solo si no existen)
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_users_exp ON users(exp DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_users_level ON users(level DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_chat_users_chat ON chat_users(chat_id)',
+    'CREATE INDEX IF NOT EXISTS idx_chat_users_coins ON chat_users(coins DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_chat_users_lastCmd ON chat_users(lastCmd DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_settings_id ON settings(id)',
+  ];
+  for (const idx of indexes) {
+    try { db.exec(idx); } catch {}
+  }
+
   columnsCache.clear();
 
   // Migraciones ALTER TABLE solo en la primera vez (o si cambia versión)

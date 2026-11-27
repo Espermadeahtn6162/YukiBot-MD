@@ -1,4 +1,6 @@
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
+
 export default {
   command: ['w', 'work', 'chambear', 'trabajar'],
   category: 'economy',
@@ -11,29 +13,21 @@ export default {
     const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
     const settings = db.getSettings(botId);
     const monedas = settings.currency;
-    db.setCreate('chat_users', [msg.chat, msg.sender], 'lastwork', 0);
-    const user = db.getChatUser(msg.chat, msg.sender);
-    const cooldown = 3 * 60 * 1000;
-    if (Date.now() < user.lastwork) {
-      const tiempoRestante = formatTime(user.lastwork - Date.now());
-      return sock.reply(msg.chat, `ꕥ Debes esperar *${tiempoRestante}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+
+    // Cooldown system
+    const cd = checkCooldown(command, msg.sender);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
+
     const rsl = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
-    db.setChatUser(msg.chat, msg.sender, 'lastwork', Date.now() + cooldown);
-    db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) + rsl);    
+    setCooldown(command, msg.sender);
+
+    const user = db.getChatUser(msg.chat, msg.sender);
+    db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) + rsl);
     await sock.sendMessage(msg.chat, { text: `❀ ${pickRandom(trabajo)} *¥${rsl.toLocaleString()} ${monedas}*.` }, { quoted: msg });
   }
 };
-
-function formatTime(ms) {
-  const totalSec = Math.ceil(ms / 1000);
-  const minutes = Math.floor((totalSec % 3600) / 60);
-  const seconds = totalSec % 60;
-  const parts = [];
-  if (minutes > 0) parts.push(`${minutes} minuto${minutes !== 1 ? 's' : ''}`);
-  parts.push(`${seconds} segundo${seconds !== 1 ? 's' : ''}`);
-  return parts.join(' ');
-}
 
 function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];

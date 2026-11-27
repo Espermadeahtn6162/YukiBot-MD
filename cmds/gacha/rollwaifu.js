@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { promises as fs } from 'fs';
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
 
 const FILE_PATH = './core/characters.json';
 const rollLocks = new Map();
@@ -60,6 +61,13 @@ export default {
   run: async ({ msg, sock, usedPrefix, command }) => {
     const userId = msg.sender;
     const chatId = msg.chat;
+
+    // Cooldown system
+    const cd = checkCooldown(command, userId);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+    }
+
     cleanOldLocks();
     if (rollLocks.has(userId)) {
       const lockTime = rollLocks.get(userId);
@@ -67,25 +75,15 @@ export default {
       if (now - lockTime < 15000) return;
       rollLocks.delete(userId);
     }
+
     let chat = db.getChat(chatId);
     if (chat.adminonly || !chat.gacha) {
       return msg.reply(`ꕥ Los comandos de *Gacha* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}gacha on*`);
     }
-    db.setCreate('chat_users', [chatId, userId], 'lastRoll', 0);
-    let user = db.getChatUser(chatId, userId);
-    let me = user;
-    const now = Date.now();
-    const cooldown = 15 * 60 * 1000;
-    if (me.lastRoll && now < me.lastRoll) {
-      const r = Math.ceil((me.lastRoll - now) / 1000);
-      const min = Math.floor(r / 60);
-      const sec = r % 60;
-      let timeText = '';
-      if (min > 0) timeText += `${min} minuto${min !== 1 ? 's' : ''} `;
-      if (sec > 0 || timeText === '') timeText += `${sec} segundo${sec !== 1 ? 's' : ''}`;
-      return msg.reply(`ꕥ Debes esperar *${timeText.trim()}* para usar *${usedPrefix + 'rw'}* de nuevo.`);
-    }
-    rollLocks.set(userId, now);
+
+    setCooldown(command, userId);
+    rollLocks.set(userId, Date.now());
+
     try {
       const chars = await loadCharacters();
       const all = flattenCharacters(chars);
@@ -111,18 +109,18 @@ export default {
       chatChar.value = typeof globalChar.value === 'number' ? globalChar.value : Number(selected.value) || 100;
       chatChar.votes = Number(chatChar.votes || globalChar.votes || 0);
       chatChar.reservedBy = userId;
+      const now = Date.now();
       chatChar.reservedUntil = now + 20000;
       chatChar.expiresAt = now + 60000;
       db.setCharacter(charKey, chatChar);
       const claimedBy = chatChar?.user || null;
       const owner = claimedBy ? (db.getUser(claimedBy))?.name || claimedBy.split('@')[0] : 'desconocido';
-      const caption = `❀ Nombre » *${chatChar.name}*\n⚥ Género » *${selected.gender || 'Desconocido'}*\n✰ Valor » *${chatChar.value.toLocaleString()}*\n♡ Estado » *${claimedBy ? `Reclamado por ${owner}` : 'Libre'}*\n❖ Fuente » *${source}*\u206c`;
+      const caption = `❀ Nombre » *${chatChar.name}*\n⚥ Género » *${selected.gender || 'Desconocido'}*\n✰ Valor » *${chatChar.value.toLocaleString()}*\n♡ Estado » *${claimedBy ? `Reclamado por ${owner}` : 'Libre'}*\n❖ Fuente » *${source}*⁬`;
       const imgRes = await axios.get(media, { responseType: 'arraybuffer', timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Referer': getRefererForUrl(media) } });
       const buffer = Buffer.from(imgRes.data);
       const sent = await sock.sendMessage(chatId, { image: buffer, caption: caption }, { quoted: msg });
       chat.rolls[sent.key.id] = { id, charKey, name: chatChar.name, expiresAt: chatChar.expiresAt, reservedBy: userId, reservedUntil: chatChar.reservedUntil };
       db.setChat(chatId, 'rolls', chat.rolls);
-      db.setChatUser(chatId, userId, 'lastRoll', now + cooldown);
     } catch (e) {
       await msg.reply(`> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`);
     } finally {
