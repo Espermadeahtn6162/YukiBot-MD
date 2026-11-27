@@ -1,58 +1,106 @@
 import db from '#db';
 
-const DEFAULT_COOLDOWNS = {
-  economy: {
-    work: 30000, daily: 86400000, weekly: 604800000, monthly: 2592000000,
-    coinflip: 5000, crime: 60000, deposit: 2000, withdraw: 2000,
-    givecoins: 5000, steal: 120000, casino: 10000, roulette: 10000,
-    aventura: 60000, cazar: 30000, pescar: 30000, minar: 45000,
-    mazmorra: 120000, curar: 10000,
-  },
-  gacha: { rollwaifu: 10000, claim: 5000, harem: 3000, buychar: 5000, sell: 5000, trade: 10000, givechar: 5000, vote: 30000 },
-  downloads: { play: 15000, play2: 15000, tiktok: 15000, instagram: 15000, twitter: 15000, facebook: 15000, mediafire: 15000, drive: 15000, imagen: 10000, aptoide: 15000 },
-  utils: { ia: 10000, trad: 5000, hd: 20000, gitclone: 30000 },
-  stickers: { sticker: 5000, audiosticker: 10000, brat: 5000 },
+const COOLDOWNS = {
+  work: 30000,
+  daily: 86400000,
+  weekly: 604800000,
+  monthly: 2592000000,
+  coinflip: 10000,
+  crime: 60000,
+  deposit: 2000,
+  withdraw: 2000,
+  givecoins: 5000,
+  steal: 120000,
+  casino: 10000,
+  roulette: 10000,
+  aventura: 60000,
+  cazar: 30000,
+  pescar: 30000,
+  minar: 45000,
+  mazmorra: 120000,
+  curar: 10000,
+  heal: 10000,
+  rollwaifu: 10000,
+  claim: 5000,
+  harem: 3000,
+  buychar: 5000,
+  sell: 5000,
+  trade: 10000,
+  givechar: 5000,
+  vote: 30000,
+  play: 15000,
+  play2: 15000,
+  tiktok: 15000,
+  instagram: 15000,
+  twitter: 15000,
+  facebook: 15000,
+  mediafire: 15000,
+  drive: 15000,
+  imagen: 10000,
+  aptoide: 15000,
+  ia: 10000,
+  trad: 5000,
+  hd: 20000,
+  gitclone: 30000,
+  sticker: 5000,
+  audiosticker: 10000,
+  brat: 5000,
+  ppt: 60000,
+  slut: 300000,
 };
 
-let aliasToPrimary = new Map();
-let lastCommandRevision = -1;
+const ALIASES = {
+  w: 'work', chambear: 'work', trabajar: 'work',
+  diario: 'daily', semanal: 'weekly', mensual: 'monthly',
+  cf: 'coinflip', flip: 'coinflip',
+  dep: 'deposit', d: 'deposit', depositar: 'deposit',
+  with: 'withdraw', retirar: 'withdraw',
+  pay: 'givecoins', coinsgive: 'givecoins',
+  robar: 'steal', rob: 'steal',
+  apostar: 'casino', slot: 'casino',
+  rt: 'roulette', ruleta: 'roulette',
+  aventura: 'aventura',
+  cazar: 'cazar', hunt: 'cazar',
+  pescar: 'pescar', fish: 'pescar',
+  minar: 'minar', mine: 'minar',
+  mazmorra: 'mazmorra', dungeon: 'mazmorra',
+  curar: 'curar', heal: 'curar', pocion: 'curar', potion: 'curar',
+  rw: 'rollwaifu', roll: 'rollwaifu',
+  c: 'claim', reclamar: 'claim',
+  harem: 'harem', waifus: 'harem', claims: 'harem',
+  buyc: 'buychar', buychar: 'buychar',
+  vender: 'sell', sell: 'sell',
+  intercambiar: 'trade', trade: 'trade',
+  regalar: 'givechar', givewaifu: 'givechar', givechar: 'givechar',
+  votar: 'vote', vote: 'vote',
+  play: 'play', mp3: 'play', playaudio: 'play', ytaudio: 'play', ytmp3: 'play',
+  play2: 'play2', mp4: 'play2', playvideo: 'play2', ytvideo: 'play2', ytmp4: 'play2',
+  tt: 'tiktok', tiktok: 'tiktok',
+  ig: 'instagram', reel: 'instagram', instagram: 'instagram',
+  x: 'twitter', twitter: 'twitter',
+  fb: 'facebook', facebook: 'facebook',
+  mf: 'mediafire', mediafire: 'mediafire',
+  gdrive: 'drive', drive: 'drive',
+  img: 'imagen', imagen: 'imagen', image: 'imagen',
+  apk: 'aptoide', aptoide: 'aptoide',
+  ia: 'ia', chatgpt: 'ia',
+  trad: 'trad', traducir: 'trad', translate: 'trad',
+  hd: 'hd', enhance: 'hd', remini: 'hd',
+  git: 'gitclone', gitclone: 'gitclone',
+  s: 'sticker', sticker: 'sticker',
+  asticker: 'audiosticker', saudio: 'audiosticker', 's audio': 'audiosticker',
+  brat: 'brat', bratv: 'brat', qc: 'brat', emojimix: 'brat',
+  ppt: 'ppt',
+  slut: 'slut', prostituirse: 'slut',
+};
 
-function buildAliasMap() {
-  if (!global.comandos) return;
-  const currentRevision = global.commandRevision || 0;
-  if (aliasToPrimary.size > 0 && currentRevision === lastCommandRevision) return;
-
-  aliasToPrimary.clear();
-  const seen = new Map();
-
-  for (const [alias, data] of global.comandos) {
-    const primary = seen.get(data.pluginKey) || alias;
-    seen.set(data.pluginKey, primary);
-    aliasToPrimary.set(alias, primary);
-  }
-  lastCommandRevision = currentRevision;
-  console.log(`[COOLDOWN] Alias map built: ${aliasToPrimary.size} entries, revision ${lastCommandRevision}`);
-}
-
-function getPrimaryCommand(command) {
-  buildAliasMap();
-  const primary = aliasToPrimary.get(command) || command;
-  return primary;
-}
-
-function getCategoryFromCommand(command) {
-  const primary = getPrimaryCommand(command);
-  for (const [cat, cmds] of Object.entries(DEFAULT_COOLDOWNS)) {
-    if (cmds[primary]) return cat;
-  }
-  return null;
+function getPrimary(command) {
+  return ALIASES[command.toLowerCase()] || command.toLowerCase();
 }
 
 function getCooldownMs(command) {
-  const primary = getPrimaryCommand(command);
-  const category = getCategoryFromCommand(command);
-  if (!category) return 0;
-  return DEFAULT_COOLDOWNS[category][primary] || 0;
+  const primary = getPrimary(command);
+  return COOLDOWNS[primary] || 0;
 }
 
 function getDbField(command) {
@@ -61,7 +109,7 @@ function getDbField(command) {
     coinflip: 'lastcoinflip', crime: 'lastcrime', deposit: 'lastdeposit', withdraw: 'lastwithdraw',
     givecoins: 'lastgivecoins', steal: 'laststeal', casino: 'lastApuesta', roulette: 'lastroulette',
     aventura: 'lastadventure', cazar: 'lasthunt', pescar: 'lastfish', minar: 'lastmine',
-    mazmorra: 'lastdungeon', curar: 'lastheal', heal: 'lastheal', curar: 'lastheal', pocion: 'lastheal', potion: 'lastheal',
+    mazmorra: 'lastdungeon', curar: 'lastheal', heal: 'lastheal',
     rollwaifu: 'lastRoll', claim: 'lastclaim', harem: 'lastharem', buychar: 'lastbuychar',
     sell: 'lastsell', trade: 'lasttrade', givechar: 'lastgivechar', vote: 'lastvote',
     play: 'lastplay', play2: 'lastplay2', tiktok: 'lasttiktok', instagram: 'lastinstagram',
@@ -71,72 +119,41 @@ function getDbField(command) {
     sticker: 'laststicker', audiosticker: 'lastaudiosticker', brat: 'lastbrat',
     ppt: 'lastppt', slut: 'lastslut',
   };
-  const primary = getPrimaryCommand(command);
+  const primary = getPrimary(command);
   return map[primary] || `last${primary}`;
 }
 
 export function checkCooldown(command, userId) {
   const cooldownMs = getCooldownMs(command);
-  console.log(`[COOLDOWN] checkCooldown(${command}, ${userId}) -> cooldownMs: ${cooldownMs}`);
   if (!cooldownMs) return { allowed: true, remaining: 0 };
 
   const field = getDbField(command);
   const now = Date.now();
 
-  const cacheKey = `cooldown:${command}:${userId}`;
-  if (global.cooldownCache?.has(cacheKey)) {
-    const lastUsed = global.cooldownCache.get(cacheKey);
-    if (now - lastUsed < getCooldownMs(command)) {
-      const remaining = getCooldownMs(command) - (now - lastUsed);
-      console.log(`[COOLDOWN] BLOCKED by memory cache, remaining: ${remaining}ms`);
-      return { allowed: false, remaining, cooldownMs: getCooldownMs(command) };
-    }
-  }
-
   try {
     const userGlobal = db.getUser(userId);
-    const field = getDbField(command);
     if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
-      if (!global.cooldownCache) global.cooldownCache = new Map();
-      global.cooldownCache.set(`cooldown:${command}:${userId}`, userGlobal[field] - getCooldownMs(command));
-      const remaining = userGlobal[field] - now;
-      console.log(`[COOLDOWN] BLOCKED by DB (${field}=${userGlobal[field]}), remaining: ${remaining}ms`);
-      return { allowed: false, remaining, cooldownMs: getCooldownMs(command) };
+      return { allowed: false, remaining: userGlobal[field] - now, cooldownMs };
     }
-  } catch (e) {
-    console.log(`[COOLDOWN] DB check error: ${e.message}`);
-  }
+  } catch {}
 
-  console.log(`[COOLDOWN] ALLOWED`);
-  return { allowed: true, remaining: 0, cooldownMs: getCooldownMs(command) };
+  return { allowed: true, remaining: 0, cooldownMs };
 }
 
 export function setCooldown(command, userId) {
   const cooldownMs = getCooldownMs(command);
-  console.log(`[COOLDOWN] setCooldown(${command}, ${userId}) -> cooldownMs: ${cooldownMs}`);
   if (!cooldownMs) return;
 
   const field = getDbField(command);
   const now = Date.now();
   const expiry = now + cooldownMs;
 
-  const cacheKey = `cooldown:${command}:${userId}`;
-  global.cooldownCache = global.cooldownCache || new Map();
-  global.cooldownCache.set(cacheKey, now);
-  console.log(`[COOLDOWN] Memory cache SET: ${cacheKey} = ${now}`);
-
   try {
     const userGlobal = db.getUser(userId);
-    const field = getDbField(command);
     if (userGlobal && Object.prototype.hasOwnProperty.call(userGlobal, field)) {
       db.setUser(userId, field, now + cooldownMs);
-      console.log(`[COOLDOWN] DB SET: ${field} = ${now + cooldownMs} for user ${userId}`);
-    } else {
-      console.log(`[COOLDOWN] Field ${field} not found in userGlobal, skipping DB`);
     }
-  } catch (e) {
-    console.log(`[COOLDOWN] DB set error: ${e.message}`);
-  }
+  } catch {}
 }
 
 export function getCooldownRemaining(command, userId) {
@@ -145,12 +162,6 @@ export function getCooldownRemaining(command, userId) {
 
   const field = getDbField(command);
   const now = Date.now();
-
-  const cacheKey = `cooldown:${command}:${userId}`;
-  if (global.cooldownCache?.has(cacheKey)) {
-    const lastUsed = global.cooldownCache.get(cacheKey);
-    return Math.max(0, cooldownMs - (now - lastUsed));
-  }
 
   try {
     const userGlobal = db.getUser(userId);
@@ -173,14 +184,5 @@ export function formatMs(ms) {
 }
 
 export function getAllCooldowns() {
-  return DEFAULT_COOLDOWNS;
-}
-
-export function getDebugInfo() {
-  buildAliasMap();
-  return {
-    aliasMap: Object.fromEntries(aliasToPrimary),
-    cache: global.cooldownCache ? Object.fromEntries(global.cooldownCache) : {},
-    revision: global.commandRevision || 0,
-  };
+  return COOLDOWNS;
 }

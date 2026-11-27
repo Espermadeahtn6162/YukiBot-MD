@@ -14,7 +14,6 @@ export default {
     const settings = db.getSettings(botId);
     const monedas = settings.currency;
 
-    // Cooldown system
     const cd = checkCooldown(command, msg.sender);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
@@ -52,6 +51,19 @@ const trabajo = [
   "Trabajas en una granja orgánica y obtienes",
   "Eres un bailarín en un espectáculo y ganas",
   "Organizas ferias de arte y recibes",
+  "Eres un escritor freelance y ganas",
+  "Hiciste un diseño gráfico para una campaña y te pagaron",
+  "Trabajas como mecánico de automóviles y ganas",
+  "Eres un instructor de surf y recibes",
+  "Limpias casas como servicio de limpieza y ganas",
+  "Eres un técnico de sonido en conciertos y obtienes",
+  "Trabajas como desarrollador de aplicaciones y ganas",
+  "Eres un croupier en un casino y recibes",
+  "Trabajas como estilista de cabello y ganas",
+  "Eres un restaurador de arte y obtienes",
+  "Trabajas en una librería y ganas",
+  "Eres un guía de montañismo y recibes",
+  "Llevas un blog de viajes y ganas",
   "Eres un escritor freelance y ganas",
   "Hiciste un diseño gráfico para una campaña y te pagaron",
   "Trabajas como mecánico de automóviles y ganas",
@@ -109,7 +121,7 @@ const trabajo = [
   "Trabajas como coach de vida y ganas",
   "Eres un educador en un centro cultural y recibes",
   "Eres un director de fotografía y ganas",
-  "Trabajas en un refugio de animales y obtienes",
+  "Trabajas en un centro de rehabilitación y obtienes",
   "Eres un guía en almuerzos y cenas temáticas y ganas",
   "Hiciste un proyecto de arte comunitario y recibiste",
   "Eres un traductor de documentos y obtienes",
@@ -117,6 +129,6 @@ const trabajo = [
   "Eres un especialista en sostenibilidad y recibes",
   "Realizas un programa de radio y ganas",
   "Trabajas como tasador de arte y obtienes",
-  "Eres un creador de contenido en redes sociales y ganas",
+  "Trabajas como creador de contenido en redes sociales y ganas",
   "Hiciste un workshop de manualidades y recibiste"
 ];
