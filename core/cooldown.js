@@ -56,25 +56,52 @@ const DEFAULT_COOLDOWNS = {
   },
 };
 
+// Mapa de alias -> comando principal (se construye dinámicamente desde global.comandos)
+let aliasToPrimary = null;
+let lastCommandRevision = -1;
+
+function buildAliasMap() {
+  if (!global.comandos) return;
+  const currentRevision = global.commandRevision || 0;
+  if (aliasToPrimary && currentRevision === lastCommandRevision) return;
+
+  aliasToPrimary = new Map();
+  const seen = new Map(); // primary -> first alias (el principal)
+
+  for (const [alias, data] of global.comandos) {
+    const primary = seen.get(data.pluginKey) || alias;
+    seen.set(data.pluginKey, primary);
+    aliasToPrimary.set(alias, primary);
+  }
+  lastCommandRevision = currentRevision;
+}
+
+function getPrimaryCommand(command) {
+  buildAliasMap();
+  return aliasToPrimary?.get(command) || command;
+}
+
 function getCooldownKey(category, command, userId) {
   return `cooldown:${category}:${command}:${userId}`;
 }
 
 function getCategoryFromCommand(command) {
+  const primary = getPrimaryCommand(command);
   for (const [cat, cmds] of Object.entries(DEFAULT_COOLDOWNS)) {
-    if (cmds[command]) return cat;
+    if (cmds[primary]) return cat;
   }
   return null;
 }
 
 export function checkCooldown(command, userId) {
+  const primary = getPrimaryCommand(command);
   const category = getCategoryFromCommand(command);
   if (!category) return { allowed: true, remaining: 0 };
 
-  const cooldownMs = DEFAULT_COOLDOWNS[category][command];
+  const cooldownMs = DEFAULT_COOLDOWNS[category][primary];
   if (!cooldownMs) return { allowed: true, remaining: 0 };
 
-  const key = getCooldownKey(category, command, userId);
+  const key = getCooldownKey(category, primary, userId);
   const now = Date.now();
   const lastUsed = global.cooldownCache?.get(key) || 0;
 
@@ -87,22 +114,24 @@ export function checkCooldown(command, userId) {
 }
 
 export function setCooldown(command, userId) {
+  const primary = getPrimaryCommand(command);
   const category = getCategoryFromCommand(command);
   if (!category) return;
 
-  const key = getCooldownKey(category, command, userId);
+  const key = getCooldownKey(category, primary, userId);
   if (!global.cooldownCache) global.cooldownCache = new Map();
   global.cooldownCache.set(key, Date.now());
 }
 
 export function getCooldownRemaining(command, userId) {
+  const primary = getPrimaryCommand(command);
   const category = getCategoryFromCommand(command);
   if (!category) return 0;
 
-  const cooldownMs = DEFAULT_COOLDOWNS[category][command];
+  const cooldownMs = DEFAULT_COOLDOWNS[category][primary];
   if (!cooldownMs) return 0;
 
-  const key = getCooldownKey(category, command, userId);
+  const key = getCooldownKey(category, primary, userId);
   const lastUsed = global.cooldownCache?.get(key) || 0;
   const remaining = cooldownMs - (Date.now() - lastUsed);
   return Math.max(0, remaining);
