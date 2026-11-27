@@ -61,6 +61,7 @@ const msgStore = new Map();
 const msgLimit = 500;
 
 async function loadBots() {
+  const tasks = [];
   for (const { name, folder, starter } of botTypes) {
     if (!fs.existsSync(folder)) continue;
     const botIds = fs.readdirSync(folder);
@@ -70,16 +71,18 @@ async function loadBots() {
       if (!fs.existsSync(credsPath)) continue;
       if (global.conns.some((conn) => conn.userId === userId)) continue;
       if (reconnecting.has(userId)) continue;
-      try {
-        reconnecting.add(userId);
-        await starter(null, null, '', false, userId, '');
-      } catch (e) {
-        console.log(chalk.gray(`[ loadBots ] Error iniciando ${name} ${userId}: ${e?.message || e}`));
-        reconnecting.delete(userId);
-      }
-      await new Promise((res) => setTimeout(res, 2500));
+      tasks.push((async () => {
+        try {
+          reconnecting.add(userId);
+          await starter(null, null, '', false, userId, '');
+        } catch (e) {
+          console.log(chalk.gray(`[ loadBots ] Error iniciando ${name} ${userId}: ${e?.message || e}`));
+          reconnecting.delete(userId);
+        }
+      })());
     }
   }
+  if (tasks.length) await Promise.allSettled(tasks);
   setTimeout(loadBots, 60 * 1000);
 }
 
@@ -286,7 +289,8 @@ export async function startBot() {
       log.success(`[ ✿ ]  Conectado a: ${userName}`);
       if (!botReady) {
         botReady = true;
-        warmupGroups(sock);
+        // Warmup en background, no bloquea el ready
+        warmupGroups(sock).catch(() => {});
       }
     }
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
@@ -336,7 +340,8 @@ cleanCache();
   await initDB();
   await cmdsLoader();
   await startBot();
-  await loadBots();
+  // loadBots se ejecuta en background (se auto-reprograma cada 60s)
+  loadBots().catch(() => {});
 })();
 
 function onUncaughtException(e) {

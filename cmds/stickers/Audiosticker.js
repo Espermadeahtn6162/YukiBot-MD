@@ -117,9 +117,9 @@ export default {
       // Caso 1: Video directo o citado (extrae el video como sticker animado y el audio como opus)
       if (/video/.test(quotedMime)) {
         const duration = (quoted.msg || quoted).seconds || 0;
-        if (duration > 30) {
+        if (duration > 15) {
           cleanup();
-          return msg.reply('《✧》 El video no puede ser muy largo (máximo 30 segundos).');
+          return msg.reply('《✧》 El video no puede ser muy largo (máximo 15 segundos).');
         }
         const vidBuf = await quoted.download();
         const vidPath = `./tmp/in-vid-${Date.now()}.mp4`;

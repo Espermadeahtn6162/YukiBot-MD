@@ -67,15 +67,16 @@ function collectFiles(dir, out = []) {
 
 async function scan(dir) {
   const files = collectFiles(dir);
-  const results = await Promise.allSettled(files.map(async (filePath) => {
-      const mod = await importModule(filePath);
-      registerModule(filePath, mod);
-    }));
+  // Carga en paralelo REAL: importa todos y luego registra todos
+  const imports = await Promise.allSettled(files.map(filePath => importModule(filePath)));
   let errCount = 0;
-  for (let i = 0; i < results.length; i++) {
-    if (results[i].status === 'rejected') {
+  for (let i = 0; i < files.length; i++) {
+    const result = imports[i];
+    if (result.status === 'fulfilled') {
+      registerModule(files[i], result.value);
+    } else {
       errCount++;
-      console.error(chalk.gray(`[ ✿ ] Error cargando ${path.basename(files[i])}: ${results[i].reason?.message ?? results[i].reason}`));
+      console.error(chalk.gray(`[ ✿ ] Error cargando ${path.basename(files[i])}: ${result.reason?.message ?? result.reason}`));
     }
   }
   return { total: files.length, errors: errCount };

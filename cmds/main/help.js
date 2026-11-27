@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getDevice, prepareWAMessageMedia } from 'baileys';
+import { getDevice } from 'baileys';
 import fs from 'fs';
 import axios from 'axios';
 import moment from 'moment-timezone';
@@ -7,7 +7,7 @@ import { bodyMenu, menuObject } from '#system/commands';
 import db from '#db';
 
 function normalize(text = '') {
-  text = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  text = text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
   return text.endsWith('s') ? text.slice(0, -1) : text;
 }
 
@@ -78,7 +78,45 @@ export default {
       for (const [key, value] of Object.entries(replacements)) {
         menu = menu.replace(new RegExp(`\\${key}`, 'g'), value);
       }
-      await sock.sendMessage(msg.chat, banner.includes('.mp4') || banner.includes('.webm') ? { video: { url: banner }, gifPlayback: true, caption: menu.trim(), contextInfo: { mentionedJid: [owner, msg.sender], isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: canalId, serverMessageId: '0', newsletterName: canalName }}} : { text: menu.trim(), linkPreview: link && banner ? (await prepareWAMessageMedia({ image: { url: banner }}, { upload: sock.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 'canonical-url': link, 'matched-text': link, title: botname, description: `${namebot}, mᥲძᥱ ᥕі𝗍һ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜`, jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, highQualityThumbnail: imageMessage || undefined }))) : undefined, contextInfo: { mentionedJid: [owner, msg.sender], isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: canalId, serverMessageId: '0', newsletterName: canalName }}}, { quoted: msg });
+
+      // Enviar menú compatible con Desktop y Mobile (SIN forwardedNewsletterMessageInfo)
+      const mentionedJid = [owner, msg.sender].filter(Boolean);
+      const contextInfo = { mentionedJid };
+
+      if (banner && (banner.includes('.mp4') || banner.includes('.webm'))) {
+        // Video/GIF con caption
+        await sock.sendMessage(msg.chat, {
+          video: { url: banner },
+          gifPlayback: true,
+          caption: menu.trim(),
+          contextInfo
+        }, { quoted: msg });
+      } else if (banner && (banner.includes('.jpg') || banner.includes('.jpeg') || banner.includes('.png') || banner.includes('.webp'))) {
+        // Imagen con caption (mejor compatibilidad Desktop)
+        await sock.sendMessage(msg.chat, {
+          image: { url: banner },
+          caption: menu.trim(),
+          contextInfo
+        }, { quoted: msg });
+      } else if (banner && link) {
+        // Link preview simple
+        await sock.sendMessage(msg.chat, {
+          text: menu.trim(),
+          linkPreview: {
+            'canonical-url': link,
+            'matched-text': link,
+            title: botname || namebot,
+            description: `${namebot} - Bot de WhatsApp`
+          },
+          contextInfo
+        }, { quoted: msg });
+      } else {
+        // Texto plano (fallback garantizado)
+        await sock.sendMessage(msg.chat, {
+          text: menu.trim(),
+          contextInfo
+        }, { quoted: msg });
+      }
     } catch (e) {
       await msg.reply(`> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`);
     }

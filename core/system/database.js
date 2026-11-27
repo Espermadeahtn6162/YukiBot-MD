@@ -1,5 +1,7 @@
 import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'fs';
+import chalk from 'chalk';
 
 const dbPath = path.join(process.cwd(), 'core', 'database.db');
 const db = new DatabaseSync(dbPath);
@@ -7,6 +9,26 @@ db.exec("PRAGMA journal_mode = WAL");
 db.exec("PRAGMA synchronous = NORMAL");
 db.exec("PRAGMA cache_size = -32000");
 db.exec("PRAGMA busy_timeout = 5000");
+
+// Flag para evitar migraciones repetidas en cada inicio
+const MIGRATION_FLAG = path.join(process.cwd(), 'core', '.migrations_done');
+const MIGRATION_VERSION = '1.0.0';
+
+function migrationsAlreadyRun() {
+  try {
+    if (!fs.existsSync(MIGRATION_FLAG)) return false;
+    const content = fs.readFileSync(MIGRATION_FLAG, 'utf8').trim();
+    return content === MIGRATION_VERSION;
+  } catch {
+    return false;
+  }
+}
+
+function markMigrationsDone() {
+  try {
+    fs.writeFileSync(MIGRATION_FLAG, MIGRATION_VERSION);
+  } catch {}
+}
 
 const stmts = new Map();
 const MAX_STATEMENTS = 256;
@@ -223,6 +245,12 @@ export function initDB() {
   db.exec(`CREATE TABLE IF NOT EXISTS characters (id TEXT PRIMARY KEY, data TEXT)`);
   db.exec(`CREATE TABLE IF NOT EXISTS sticker_packs (id TEXT PRIMARY KEY, packs TEXT DEFAULT '[]')`);
   columnsCache.clear();
+
+  // Migraciones ALTER TABLE solo en la primera vez (o si cambia versión)
+  if (!migrationsAlreadyRun()) {
+    runMigrations();
+    markMigrationsDone();
+  }
 }
 
 export function getUser(id, opt = {}) {
@@ -469,30 +497,33 @@ export function setCreate(table, identifier, field, value) {
 
 export function clearCache() { return true; }
 
-try {
-  const tables = [{ name: 'users', def: defUser, exclude: ['id'] }, { name: 'chats', def: defChat, exclude: ['id'] }, { name: 'chat_users', def: defChatUser, exclude: ['chat_id', 'user_id'] }, { name: 'settings', def: defSets, exclude: ['id'] }, { name: 'sticker_packs', def: defStickerPack, exclude: ['id'] }];
-  for (const table of tables) {
-    if (!stmt(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table.name)) continue;
-    const existingCols = stmt(`PRAGMA table_info(${table.name})`).all();
-    const existingNames = existingCols.map(c => c.name);
-    const missingCols = Object.keys(table.def).filter(col => !existingNames.includes(col) && !table.exclude.includes(col));
-    for (const col of missingCols) {
-      const defaultValue = table.def[col];
-      let sqlType = 'TEXT';
-      if (typeof defaultValue === 'number') sqlType = 'INTEGER';
-      else if (typeof defaultValue === 'boolean') sqlType = 'BOOLEAN';
-      const defaultStr = defaultValue === null ? 'NULL' : JSON.stringify(defaultValue);
-      db.exec(`ALTER TABLE ${table.name} ADD COLUMN ${col} ${sqlType} DEFAULT ${defaultStr}`);
-      if (table.name === 'chat_users') {
-        for (const row of stmt(`SELECT chat_id, user_id FROM ${table.name}`).all())
-          stmt(`UPDATE ${table.name} SET ${col} = ? WHERE chat_id = ? AND user_id = ?`).run(defaultValue, row.chat_id, row.user_id);
-      } else {
-        for (const row of stmt(`SELECT id FROM ${table.name}`).all())
-          stmt(`UPDATE ${table.name} SET ${col} = ? WHERE id = ?`).run(defaultValue, row.id);
+function runMigrations() {
+  try {
+    const tables = [{ name: 'users', def: defUser, exclude: ['id'] }, { name: 'chats', def: defChat, exclude: ['id'] }, { name: 'chat_users', def: defChatUser, exclude: ['chat_id', 'user_id'] }, { name: 'settings', def: defSets, exclude: ['id'] }, { name: 'sticker_packs', def: defStickerPack, exclude: ['id'] }];
+    for (const table of tables) {
+      if (!stmt(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table.name)) continue;
+      const existingCols = stmt(`PRAGMA table_info(${table.name})`).all();
+      const existingNames = existingCols.map(c => c.name);
+      const missingCols = Object.keys(table.def).filter(col => !existingNames.includes(col) && !table.exclude.includes(col));
+      for (const col of missingCols) {
+        const defaultValue = table.def[col];
+        let sqlType = 'TEXT';
+        if (typeof defaultValue === 'number') sqlType = 'INTEGER';
+        else if (typeof defaultValue === 'boolean') sqlType = 'BOOLEAN';
+        const defaultStr = defaultValue === null ? 'NULL' : JSON.stringify(defaultValue);
+        db.exec(`ALTER TABLE ${table.name} ADD COLUMN ${col} ${sqlType} DEFAULT ${defaultStr}`);
+        if (table.name === 'chat_users') {
+          for (const row of stmt(`SELECT chat_id, user_id FROM ${table.name}`).all())
+            stmt(`UPDATE ${table.name} SET ${col} = ? WHERE chat_id = ? AND user_id = ?`).run(defaultValue, row.chat_id, row.user_id);
+        } else {
+          for (const row of stmt(`SELECT id FROM ${table.name}`).all())
+            stmt(`UPDATE ${table.name} SET ${col} = ? WHERE id = ?`).run(defaultValue, row.id);
+        }
       }
     }
-  }
-} catch (e) { console.error('[DB migration error]', e); }
+    console.log(chalk.gray('[ ✿ ] Migraciones de base de datos completadas'));
+  } catch (e) { console.error('[DB migration error]', e); }
+}
 
 export function clearDB() {
   if (!global.cleardb) {
