@@ -2,10 +2,47 @@ import { format } from 'util';
 import chalk from 'chalk';
 import db from '#db';
 
+const EMOJI = {
+  ok: '✅',
+  no: '❌',
+  warn: '⚠️',
+  info: 'ℹ️',
+  rocket: '🚀',
+  box: '📦',
+  mail: '📨',
+  sync: '🔄',
+  db: '💾',
+  lock: '🔐',
+  users: '👥',
+  plug: '🔌',
+  chart: '📊',
+  time: '⏱️',
+  spark: '✨',
+  line: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+};
+
+function section(title, emoji) {
+  console.log(chalk.cyan.bold(`\n${emoji}  ${title}`));
+  console.log(chalk.gray(EMOJI.line));
+}
+
+function kv(label, value, color = 'gray') {
+  const val = value === undefined || value === null ? '—' : String(value);
+  console.log(chalk[color](`   ${label}: ${val}`));
+}
+
+function kvBool(label, value) {
+  kv(label, value ? `${EMOJI.ok} Sí` : `${EMOJI.no} No`, value ? 'green' : 'red');
+}
+
+function kvBlock(label, blocked) {
+  kv(label, blocked ? `${EMOJI.no} BLOQUEA` : `${EMOJI.ok} Pasa`, blocked ? 'red' : 'green');
+}
+
 export default {
   command: ['testcmd', 'test', 'debugcmd'],
   category: 'owner',
-  description: 'Debug completo de un comando (solo terminal)',
+  description: 'Debug bonito de un comando (solo terminal, para niños 🧒)',
   isOwner: true,
   run: async ({ msg, sock, args, usedPrefix, command, text, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname }) => {
     const targetCmd = args[0]?.toLowerCase();
@@ -16,148 +53,162 @@ export default {
     const cmdData = global.comandos.get(targetCmd);
     const startTime = Date.now();
 
-    console.log(chalk.bgMagenta.black.bold('\n 🔬 TESTCMD DEBUG '));
-    console.log(chalk.gray(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`));
-    console.log(chalk.yellow(`Comando objetivo: ${targetCmd}`));
-    console.log(chalk.gray(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`));
+    console.log(chalk.bgMagenta.black.bold(`\n ${EMOJI.rocket} TESTCMD — Debug divertido `));
+    console.log(chalk.gray(EMOJI.line));
+    kv('Comando', targetCmd, 'yellow');
+    console.log(chalk.gray(EMOJI.line));
 
-    // 1. COMANDO ENCONTRADO
-    console.log(chalk.cyan.bold('📦 1. COMANDO REGISTRADO:'));
+    // 1. COMANDO
+    section('COMANDO REGISTRADO', EMOJI.box);
     if (cmdData) {
-      console.log(chalk.green('   ✅ ENCONTRADO'));
-      console.log(chalk.gray(`      pluginKey: ${cmdData.pluginKey}`));
-      console.log(chalk.gray(`      category: ${cmdData.category}`));
-      console.log(chalk.gray(`      description: ${cmdData.description}`));
-      console.log(chalk.gray(`      isOwner: ${cmdData.isOwner}`));
-      console.log(chalk.gray(`      isAdmin: ${cmdData.isAdmin}`));
-      console.log(chalk.gray(`      botAdmin: ${cmdData.botAdmin}`));
-      console.log(chalk.gray(`      customPrefix: ${cmdData.customPrefix}`));
+      kvBool('¿Existe?', true);
+      kv('Categoría', cmdData.category);
+      kv('Descripción', cmdData.description || 'sin descripción');
+      kv('Plugin', cmdData.pluginKey);
+      kvBool('Solo Owner', cmdData.isOwner);
+      kvBool('Solo Admins', cmdData.isAdmin);
+      kvBool('Bot Admin req.', cmdData.botAdmin);
+      kv('Prefix custom', cmdData.customPrefix ? 'Sí' : 'No');
     } else {
-      console.log(chalk.red('   ❌ NO ENCONTRADO en global.comandos'));
-      console.log(chalk.gray(`      Buscado: "${targetCmd}"`));
-      console.log(chalk.gray(`      Total comandos: ${global.comandos.size}`));
+      kvBool('¿Existe?', false);
+      kv('Buscado', `"${targetCmd}"`);
+      kv('Total en bot', global.comandos.size);
     }
 
-    // 2. MENSAJE ORIGINAL (raw)
-    console.log(chalk.cyan.bold('\n📨 2. MENSAJE ORIGINAL (msg.key):'));
-    console.log(chalk.gray(`   id: ${msg.key?.id}`));
-    console.log(chalk.gray(`   remoteJid: ${msg.key?.remoteJid}`));
-    console.log(chalk.gray(`   fromMe: ${msg.key?.fromMe}`));
-    console.log(chalk.gray(`   participant: ${msg.key?.participant || 'N/A'}`));
+    // 2. MENSAJE ORIGINAL
+    section('MENSAJE ORIGINAL (lo que llegó de WA)', EMOJI.mail);
+    kv('ID', msg.key?.id);
+    kv('Chat', msg.key?.remoteJid);
+    kv('¿De mí?', msg.key?.fromMe ? 'Sí 🤖' : 'No 👤');
+    kv('Participante', msg.key?.participant || 'N/A');
 
-    // 3. MENSAJE SERIALIZADO (smsg)
-    console.log(chalk.cyan.bold('\n🔄 3. MENSAJE SERIALIZADO (m):'));
-    console.log(chalk.gray(`   chat: ${msg.chat}`));
-    console.log(chalk.gray(`   sender: ${msg.sender}`));
-    console.log(chalk.gray(`   pushName: ${msg.pushName}`));
-    console.log(chalk.gray(`   isGroup: ${msg.isGroup}`));
-    console.log(chalk.gray(`   isCommands: ${msg.isCommands}`));
-    console.log(chalk.gray(`   usedPrefix: ${msg.usedPrefix}`));
-    console.log(chalk.gray(`   command: ${msg.command}`));
-    console.log(chalk.gray(`   args: ${JSON.stringify(msg.args)}`));
-    console.log(chalk.gray(`   text: ${msg.text}`));
-    console.log(chalk.gray(`   body: ${msg.body}`));
-    console.log(chalk.gray(`   type: ${msg.type}`));
-    console.log(chalk.gray(`   isMedia: ${msg.isMedia}`));
+    // 3. MENSAJE SERIALIZADO
+    section('MENSAJE PROCESADO (lo que usa el bot)', EMOJI.sync);
+    kv('Chat', msg.chat);
+    kv('Tu ID', msg.sender);
+    kv('Tu nombre', msg.pushName || 'sin nombre');
+    kvBool('Es grupo', msg.isGroup);
+    kvBool('Es comando', msg.isCommands);
+    kv('Prefijo usado', msg.usedPrefix || 'ninguno');
+    kv('Comando detectado', msg.command || 'ninguno');
+    kv('Argumentos', JSON.stringify(msg.args));
+    kv('Texto completo', msg.text ? msg.text.slice(0, 80) : 'vacío');
+    kv('Body', msg.body ? msg.body.slice(0, 80) : 'vacío');
+    kv('Tipo', msg.type);
+    kvBool('Tiene media', msg.isMedia);
     if (msg.isMedia) {
-      console.log(chalk.gray(`   mime: ${msg.mime}`));
-      console.log(chalk.gray(`   size: ${msg.size}`));
+      kv('Mime', msg.mime);
+      kv('Tamaño', msg.size ? `${(msg.size/1024).toFixed(1)} KB` : '?');
     }
-    console.log(chalk.gray(`   mentionedJid: ${JSON.stringify(msg.mentionedJid)}`));
-    console.log(chalk.gray(`   device: ${msg.device}`));
-    console.log(chalk.gray(`   timestamp: ${msg.timestamp}`));
-    console.log(chalk.gray(`   expiration: ${msg.expiration}`));
+    kv('Menciones', msg.mentionedJid?.length || 0);
+    kv('Dispositivo', msg.device);
+    kv('Timestamp', msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '?');
+    kv('Expiración', msg.expiration || 'ninguna');
 
-    // 4. CONTEXTO CHAT/USER
-    console.log(chalk.cyan.bold('\n💾 4. BASE DE DATOS:'));
+    // 4. BASE DE DATOS
+    section('BASE DE DATOS (lo que sabe el bot)', EMOJI.db);
     const botId = sock?.user?.id.split(':')[0] + '@s.whatsapp.net';
     const chatDB = db.getChat(msg.chat);
     const userDB = db.getUser(msg.sender);
     const chatUserDB = db.getChatUser(msg.chat, msg.sender);
     const settingsDB = db.getSettings(botId);
 
-    console.log(chalk.gray(`   Chat DB:`));
-    console.log(chalk.gray(`      isBanned: ${chatDB?.isBanned}`));
-    console.log(chalk.gray(`      welcome: ${chatDB?.welcome}`));
-    console.log(chalk.gray(`      economy: ${chatDB?.economy}`));
-    console.log(chalk.gray(`      gacha: ${chatDB?.gacha}`));
-    console.log(chalk.gray(`      adminonly: ${chatDB?.adminonly}`));
-    console.log(chalk.gray(`      primaryBot: ${chatDB?.primaryBot}`));
+    console.log(chalk.yellow('   📝 CHAT:'));
+    kvBool('  Baneado', chatDB?.isBanned);
+    kvBool('  Welcome', chatDB?.welcome);
+    kvBool('  Economy', chatDB?.economy);
+    kvBool('  Gacha', chatDB?.gacha);
+    kvBool('  Solo admins', chatDB?.adminonly);
+    kv('  Bot primario', chatDB?.primaryBot || 'ninguno');
 
-    console.log(chalk.gray(`   User DB:`));
-    console.log(chalk.gray(`      name: ${userDB?.name}`));
-    console.log(chalk.gray(`      exp: ${userDB?.exp}`));
-    console.log(chalk.gray(`      level: ${userDB?.level}`));
-    console.log(chalk.gray(`      usedcommands: ${userDB?.usedcommands}`));
+    console.log(chalk.yellow('\n   👤 TU USER:'));
+    kv('  Nombre', userDB?.name || 'sin nombre');
+    kv('  XP', userDB?.exp?.toLocaleString() || 0);
+    kv('  Nivel', userDB?.level || 0);
+    kv('  Comandos usados', userDB?.usedcommands?.toLocaleString() || 0);
 
-    console.log(chalk.gray(`   ChatUser DB:`));
-    console.log(chalk.gray(`      coins: ${chatUserDB?.coins}`));
-    console.log(chalk.gray(`      bank: ${chatUserDB?.bank}`));
-    console.log(chalk.gray(`      health: ${chatUserDB?.health}`));
-    console.log(chalk.gray(`      afk: ${chatUserDB?.afk}`));
+    console.log(chalk.yellow('\n   💰 EN ESTE CHAT:'));
+    kv('  Coins', chatUserDB?.coins?.toLocaleString() || 0);
+    kv('  Banco', chatUserDB?.bank?.toLocaleString() || 0);
+    kv('  Salud', chatUserDB?.health || 100);
+    kv('  AFK', chatUserDB?.afk > 0 ? 'Sí' : 'No');
 
-    console.log(chalk.gray(`   Settings DB:`));
-    console.log(chalk.gray(`      prefix: ${JSON.stringify(settingsDB?.prefix)}`));
-    console.log(chalk.gray(`      namebot: ${settingsDB?.namebot}`));
-    console.log(chalk.gray(`      self: ${settingsDB?.self}`));
+    console.log(chalk.yellow('\n   ⚙️ SETTINGS DEL BOT:'));
+    kv('  Prefijos', JSON.stringify(settingsDB?.prefix));
+    kv('  Nombre bot', settingsDB?.namebot);
+    kvBool('  Modo privado', settingsDB?.self);
 
     // 5. PERMISOS
-    console.log(chalk.cyan.bold('\n🔐 5. PERMISOS:'));
-    console.log(chalk.gray(`   isOwner: ${isOwner}`));
-    console.log(chalk.gray(`   isAdmins: ${isAdmins}`));
-    console.log(chalk.gray(`   isBotAdmins: ${isBotAdmins}`));
-    console.log(chalk.gray(`   msg.isGroup: ${msg.isGroup}`));
+    section('PERMISOS (¿te deja pasar?)', EMOJI.lock);
+    kvBool('Eres Owner', isOwner);
+    kvBool('Eres Admin', isAdmins);
+    kvBool('Bot es Admin', isBotAdmins);
+    kvBool('Es grupo', msg.isGroup);
+
     if (cmdData) {
-      const ownerCheck = cmdData.isOwner && !isOwner;
-      const adminCheck = cmdData.isAdmin && !isAdmins;
-      const botAdminCheck = cmdData.botAdmin && !isBotAdmins;
-      console.log(chalk.gray(`   Bloqueado por isOwner: ${ownerCheck ? '❌ SÍ' : '✅ No'}`));
-      console.log(chalk.gray(`   Bloqueado por isAdmin: ${adminCheck ? '❌ SÍ' : '✅ No'}`));
-      console.log(chalk.gray(`   Bloqueado por botAdmin: ${botAdminCheck ? '❌ SÍ' : '✅ No'}`));
-      console.log(chalk.gray(`   self-mode active: ${settingsDB?.self && !isOwner ? '❌ SÍ (bloquea)' : '✅ No'}`));
-      console.log(chalk.gray(`   chat banned: ${chatDB?.isBanned && !isOwner ? '❌ SÍ (bloquea)' : '✅ No'}`));
-      console.log(chalk.gray(`   adminonly: ${chatDB?.adminonly && !isAdmins ? '❌ SÍ (bloquea)' : '✅ No'}`));
+      const ownerBlock = cmdData.isOwner && !isOwner;
+      const adminBlock = cmdData.isAdmin && !isAdmins;
+      const botAdminBlock = cmdData.botAdmin && !isBotAdmins;
+      const selfBlock = settingsDB?.self && !isOwner;
+      const bannedBlock = chatDB?.isBanned && !isOwner;
+      const adminOnlyBlock = chatDB?.adminonly && !isAdmins;
+
+      console.log(chalk.yellow('\n   🚦 ¿TE BLOQUEA ALGO?'));
+      kvBlock('  Solo Owner', ownerBlock);
+      kvBlock('  Solo Admins', adminBlock);
+      kvBlock('  Bot Admin req.', botAdminBlock);
+      kvBlock('  Modo privado', selfBlock);
+      kvBlock('  Chat baneado', bannedBlock);
+      kvBlock('  Solo admins chat', adminOnlyBlock);
+
+      const anyBlock = ownerBlock || adminBlock || botAdminBlock || selfBlock || bannedBlock || adminOnlyBlock;
+      if (anyBlock) {
+        console.log(chalk.red.bold('\n   ⛠️ RESULTADO: NO EJECUTARÍA (bloqueado arriba)'));
+      } else {
+        console.log(chalk.green.bold('\n   ✨ RESULTADO: EJECUTARÍA BIEN'));
+      }
     }
 
     // 6. GRUPO
     if (msg.isGroup && groupMetadata) {
-      console.log(chalk.cyan.bold('\n👥 6. GRUPO:'));
-      console.log(chalk.gray(`   subject: ${groupMetadata.subject}`));
-      console.log(chalk.gray(`   participants: ${groupMetadata.participants?.length}`));
-      console.log(chalk.gray(`   admins: ${participants?.filter(p => p.admin === 'admin' || p.admin === 'superadmin').length || 0}`));
-      console.log(chalk.gray(`   desc: ${groupMetadata.desc?.slice(0, 50) || 'sin desc'}`));
+      section('INFO DEL GRUPO', EMOJI.users);
+      kv('Nombre', groupMetadata.subject);
+      kv('Miembros', groupMetadata.participants?.length || 0);
+      kv('Admins', participants?.filter(p => p.admin === 'admin' || p.admin === 'superadmin').length || 0);
+      kv('Descripción', groupMetadata.desc?.slice(0, 50) || 'sin descripción');
     }
 
-    // 7. SOCKET STATE
-    console.log(chalk.cyan.bold('\n🔌 7. SOCKET STATE:'));
-    console.log(chalk.gray(`   user.id: ${sock?.user?.id}`));
-    console.log(chalk.gray(`   user.name: ${sock?.user?.name}`));
-    console.log(chalk.gray(`   uptime: ${sock?.uptime ? Date.now() - sock.uptime : 'N/A'}ms`));
-    console.log(chalk.gray(`   ws.readyState: ${sock?.ws?.readyState}`));
-    console.log(chalk.gray(`   ev.listeners: ${Object.keys(sock?.ev?.listeners || {}).length}`));
+    // 7. SOCKET
+    section('ESTADO DE CONEXIÓN', EMOJI.plug);
+    kv('Bot ID', sock?.user?.id);
+    kv('Bot nombre', sock?.user?.name);
+    kv('Uptime', sock?.uptime ? `${((Date.now() - sock.uptime)/1000/60).toFixed(1)} min` : 'N/A');
+    kv('WS Estado', sock?.ws?.readyState === 1 ? '🟢 Conectado' : '🔴 Desconectado');
+    kv('Event listeners', Object.keys(sock?.ev?.listeners || {}).length);
 
-    // 8. PLUGIN INFO
+    // 8. PLUGIN
     if (cmdData && global.plugins[cmdData.pluginKey]) {
       const plugin = global.plugins[cmdData.pluginKey];
-      console.log(chalk.cyan.bold('\n🔌 8. PLUGIN:'));
-      console.log(chalk.gray(`   dirname: ${plugin.dirname}`));
-      console.log(chalk.gray(`   has run: ${typeof plugin.default?.run === 'function'}`));
-      console.log(chalk.gray(`   has all: ${typeof plugin.all === 'function'}`));
-      console.log(chalk.gray(`   has before: ${typeof plugin.before === 'function'}`));
+      section('PLUGIN (archivo)', EMOJI.plug);
+      kv('Carpeta', plugin.dirname);
+      kvBool('Tiene run()', typeof plugin.default?.run === 'function');
+      kvBool('Tiene all()', typeof plugin.all === 'function');
+      kvBool('Tiene before()', typeof plugin.before === 'function');
     }
 
-    // 9. COMANDOS GLOBALES
-    console.log(chalk.cyan.bold('\n📊 9. ESTADÍSTICAS GLOBALES:'));
-    console.log(chalk.gray(`   global.comandos.size: ${global.comandos.size}`));
-    console.log(chalk.gray(`   global.cmdsExecute.length: ${global.cmdsExecute?.length}`));
-    console.log(chalk.gray(`   global.plugins keys: ${Object.keys(global.plugins || {}).length}`));
-    console.log(chalk.gray(`   global.conns.length: ${global.conns?.length || 0}`));
-    console.log(chalk.gray(`   msgStore.size: ${global.msgStore?.size || 0}`));
+    // 9. STATS
+    section('ESTADÍSTICAS GLOBALES', EMOJI.chart);
+    kv('Comandos totales', global.comandos.size.toLocaleString());
+    kv('Plugins (all/before)', global.cmdsExecute?.length || 0);
+    kv('Archivos plugin', Object.keys(global.plugins || {}).length);
+    kv('Sub-bots', global.conns?.length || 0);
+    kv('Msg en cache', global.msgStore?.size || 0);
 
+    // FIN
     const elapsed = Date.now() - startTime;
-    console.log(chalk.gray(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`));
-    console.log(chalk.bgGreen.black.bold(` ✅ DEBUG COMPLETO EN ${elapsed}ms `));
-    console.log(chalk.gray(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`));
+    console.log(chalk.gray(`\n${EMOJI.line}`));
+    console.log(chalk.bgGreen.black.bold(` ${EMOJI.spark} LISTO EN ${elapsed}ms ${EMOJI.spark} `));
+    console.log(chalk.gray(`${EMOJI.line}\n`));
 
     // Silencioso en WhatsApp
   }

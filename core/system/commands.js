@@ -171,8 +171,18 @@ profile: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *PROFILES* 𐦯╶͜─ׄ
 ꕤ *$prefixdelpasatiempo » $prefixdelhobby*
 > Eliminar tu pasatiempo del perfil.
 ╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─͜─͜─๊͜─ٞ͜─͜─֟͜┈ࠢ͜╯ׅ`,
-sockets: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *SOCKETS* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜
-> ✐ Comandos para registrar tu propio bot.
+sockets: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *SOCKETS / OWNER* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜
+> ✐ Comandos de Owner / Bot Management.
+
+🔧 *Ejecución y Debug*
+ꕤ *$prefixex / $prefixe* + <codigo JS>
+> Ejecutar JavaScript (timeout 10s, límite 4000 chars).
+ꕤ *$prefixr* + <comando shell>
+> Ejecutar comando del sistema (allow-list, timeout 15s).
+ꕤ *$prefixtestcmd / $prefixtest / $prefixdebugcmd* + <comando>
+> Debug bonito en terminal (solo owner, silencioso en WA).
+
+🤖 *Gestión de Bot*
 ꕤ *$prefixbotinfo » $prefixinfobot*
 > Obtener informacion del bot.
 ꕤ *$prefixjoin* + <link>
@@ -187,6 +197,8 @@ sockets: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *SOCKETS* 𐦯╶͜─ׄ�
 > Crear un Sub-Bot con un codigo Code.
 ꕤ *$prefixreload*
 > Recargar la sesion del bot.
+
+⚙️ *Configuración*
 ꕤ *$prefixsetname » $prefixsetbotname* + <corto / largo>
 > Cambiar el nombre del bot.
 ꕤ *$prefixsetbanner » $prefixsetbotbanner*
@@ -209,7 +221,7 @@ sockets: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *SOCKETS* 𐦯╶͜─ׄ�
 > Cambiar el estado del bot.
 ꕤ *setusername* + <value>
 > Cambiar el nombre de usuario.
-╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─͜─͜─๊͜─ٞ͜─͜─֟͜┈ࠢ͜╯ׅ`,
+╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─ׄ͜─ׄ͜─ׄ͜┈ࠢ͜╯ׅ`,
 stickers: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *STICKERS* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜
 > ✐ Comandos de *Stickers* para crear y gestionar stickers.
 ꕤ *$prefixsticker » $prefixs* + <cite / image|video>
