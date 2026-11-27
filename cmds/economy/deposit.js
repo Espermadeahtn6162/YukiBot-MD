@@ -1,9 +1,14 @@
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
 export default {
   command: ['dep', 'deposit', 'd', 'depositar'],
   category: 'economy',
   description: 'Depositar tus coins en el banco.',
-  run: async ({ msg, sock, args, usedPrefix }) => {
+  run: async ({ msg, sock, args, usedPrefix, command }) => {
+    const cd = checkCooldown(command, msg.sender);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+    }
     const chatData = db.getChat(msg.chat);
     if (chatData.adminonly || !chatData.economy) {
       return msg.reply(`ꕥ Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`);
@@ -34,7 +39,8 @@ export default {
       return msg.reply(`❀ No tienes suficientes *${monedas}* para depositar`);
     }        
     db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) - count);
-    db.setChatUser(msg.chat, msg.sender, 'bank', (user.bank || 0) + count);    
+    db.setChatUser(msg.chat, msg.sender, 'bank', (user.bank || 0) + count);
+    setCooldown(command, msg.sender);
     await msg.reply(`ꕥ Has depositado *¥${count.toLocaleString()} ${monedas}* en tu Banco`);
   }
 };

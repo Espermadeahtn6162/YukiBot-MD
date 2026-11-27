@@ -1,4 +1,5 @@
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
 global.math = global.math || {};
 
 const limits = { facil: 10, medio: 50, dificil: 90, imposible: 100, imposible2: 160 };
@@ -52,6 +53,11 @@ export default {
     return true;
   },
   run: async ({ msg, sock, args, usedPrefix, command }) => {
+    const cd = checkCooldown(command, msg.sender);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+    }
+
     const chatId = msg.chat;
     const chat = db.getChat(chatId);
     if (chat.adminonly || !chat.economy) {
@@ -73,5 +79,6 @@ export default {
         }
       }, 60000)
     };
+    setCooldown(command, msg.sender);
   }
 };

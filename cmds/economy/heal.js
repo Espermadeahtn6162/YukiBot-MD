@@ -1,9 +1,15 @@
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
 export default {
   command: ['heal', 'curar', 'pocion', 'potion'],
   category: 'economy',
   description: 'Curar salud para salir de aventuras.',
   run: async ({ msg, sock, usedPrefix, command }) => {
+    // Cooldown system
+    const cd = checkCooldown(command, msg.sender);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+    }
     const chatData = db.getChat(msg.chat);
     if (chatData.adminonly || !chatData.economy) {
       return msg.reply(`ꕥ Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`);
@@ -111,6 +117,7 @@ export default {
     } else if (faltanteStamina > 0) {
       detallesCosto = `\n> Costo stamina: *¥${costoSt.toLocaleString()}*`;
     }    
+    setCooldown(command, msg.sender);
     msg.reply(info + detallesCosto + `\n> Salud actual: ${target.health}/100\n> Stamina actual: ${target.stamina}/100`);
   }
 };

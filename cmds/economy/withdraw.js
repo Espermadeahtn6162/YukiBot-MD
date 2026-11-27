@@ -1,9 +1,14 @@
 import db from '#db';
+import { checkCooldown, setCooldown, formatMs } from '#core/cooldown';
 export default {
   command: ['withdraw', 'with', 'retirar'],
   category: 'economy',
   description: 'Retirar tus coins del banco.',
   run: async ({ msg, sock, args, usedPrefix, command }) => {
+    const cd = checkCooldown(command, msg.sender);
+    if (!cd.allowed) {
+      return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
+    }
     const chatId = msg.chat;
     const senderId = msg.sender;
     const chatData = db.getChat(chatId);
@@ -34,7 +39,8 @@ export default {
       return msg.reply(`《✧》 No tienes suficientes *${currency}* en tu banco para retirar esa cantidad.\n> Solo tienes *¥${user.bank.toLocaleString()} ${currency}* en tu cuenta.`);
     }    
     db.setChatUser(chatId, senderId, 'bank', user.bank - count);
-    db.setChatUser(chatId, senderId, 'coins', (user.coins || 0) + count);    
+    db.setChatUser(chatId, senderId, 'coins', (user.coins || 0) + count);
+    setCooldown(command, msg.sender);
     await msg.reply(`✎ Has retirado *¥${count.toLocaleString()} ${currency}* del banco, ahora podras usarlo pero tambien podran robartelo.`);
   }
 };
