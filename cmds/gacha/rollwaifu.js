@@ -63,7 +63,7 @@ export default {
     const chatId = msg.chat;
 
     // Cooldown system
-    const cd = checkCooldown(command, userId);
+    const cd = checkCooldown(command, userId, chatId);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -81,7 +81,7 @@ export default {
       return msg.reply(`ꕥ Los comandos de *Gacha* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}gacha on*`);
     }
 
-    setCooldown(command, userId);
+    setCooldown(command, userId, chatId);
     rollLocks.set(userId, Date.now());
 
     try {

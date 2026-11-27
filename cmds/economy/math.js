@@ -53,7 +53,7 @@ export default {
     return true;
   },
   run: async ({ msg, sock, args, usedPrefix, command }) => {
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -79,6 +79,6 @@ export default {
         }
       }, 60000)
     };
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
   }
 };

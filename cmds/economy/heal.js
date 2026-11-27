@@ -6,7 +6,7 @@ export default {
   description: 'Curar salud para salir de aventuras.',
   run: async ({ msg, sock, usedPrefix, command }) => {
     // Cooldown system
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -117,7 +117,7 @@ export default {
     } else if (faltanteStamina > 0) {
       detallesCosto = `\n> Costo stamina: *¥${costoSt.toLocaleString()}*`;
     }    
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
     msg.reply(info + detallesCosto + `\n> Salud actual: ${target.health}/100\n> Stamina actual: ${target.stamina}/100`);
   }
 };

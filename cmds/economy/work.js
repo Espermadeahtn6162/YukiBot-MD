@@ -14,13 +14,13 @@ export default {
     const settings = db.getSettings(botId);
     const monedas = settings.currency;
 
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
 
     const rsl = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
 
     const user = db.getChatUser(msg.chat, msg.sender);
     db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) + rsl);

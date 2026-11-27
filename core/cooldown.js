@@ -21,7 +21,7 @@ const COOLDOWNS = {
   curar: 10000,
   heal: 10000,
   rollwaifu: 10000,
-  claim: 5000,
+  claim: 1800000,
   harem: 3000,
   buychar: 5000,
   sell: 5000,
@@ -51,7 +51,7 @@ const COOLDOWNS = {
 
 const ALIASES = {
   w: 'work', chambear: 'work', trabajar: 'work',
-  diario: 'daily', semanal: 'weekly', mensual: 'monthly',
+  diario: 'daily', semanal: 'weekly', mensanal: 'monthly', mensual: 'monthly',
   cf: 'coinflip', flip: 'coinflip',
   dep: 'deposit', d: 'deposit', depositar: 'deposit',
   with: 'withdraw', retirar: 'withdraw',
@@ -94,6 +94,8 @@ const ALIASES = {
   slut: 'slut', prostituirse: 'slut',
 };
 
+const GLOBAL_COMMANDS = new Set(['daily', 'weekly', 'monthly', 'rollwaifu', 'claim', 'harem', 'buychar', 'sell', 'trade', 'givechar', 'vote']);
+
 function getPrimary(command) {
   return ALIASES[command.toLowerCase()] || command.toLowerCase();
 }
@@ -104,13 +106,14 @@ function getCooldownMs(command) {
 }
 
 function getDbField(command) {
+  const primary = getPrimary(command);
   const map = {
     work: 'lastwork', daily: 'lastdaily', weekly: 'lastweekly', monthly: 'lastmonthly',
     coinflip: 'lastcoinflip', crime: 'lastcrime', deposit: 'lastdeposit', withdraw: 'lastwithdraw',
     givecoins: 'lastgivecoins', steal: 'laststeal', casino: 'lastApuesta', roulette: 'lastroulette',
     aventura: 'lastadventure', cazar: 'lasthunt', pescar: 'lastfish', minar: 'lastmine',
     mazmorra: 'lastdungeon', curar: 'lastheal', heal: 'lastheal',
-    rollwaifu: 'lastRoll', claim: 'lastclaim', harem: 'lastharem', buychar: 'lastbuychar',
+    rollwaifu: 'lastRoll', claim: 'lastClaim', harem: 'lastharem', buychar: 'lastbuychar',
     sell: 'lastsell', trade: 'lasttrade', givechar: 'lastgivechar', vote: 'lastvote',
     play: 'lastplay', play2: 'lastplay2', tiktok: 'lasttiktok', instagram: 'lastinstagram',
     twitter: 'lasttwitter', facebook: 'lastfacebook', mediafire: 'lastmediafire',
@@ -119,56 +122,104 @@ function getDbField(command) {
     sticker: 'laststicker', audiosticker: 'lastaudiosticker', brat: 'lastbrat',
     ppt: 'lastppt', slut: 'lastslut',
   };
-  const primary = getPrimary(command);
-  return map[primary] || `last${primary}`;
+  return map[getPrimary(command)] || `last${getPrimary(command)}`;
 }
 
-export function checkCooldown(command, userId) {
+function isGlobalCommand(command) {
+  const primary = getPrimary(command);
+  return GLOBAL_COMMANDS.has(primary);
+}
+
+export function checkCooldown(command, userId, chatId = null) {
   const cooldownMs = getCooldownMs(command);
   if (!cooldownMs) return { allowed: true, remaining: 0 };
 
+  const primary = getPrimary(command);
   const field = getDbField(command);
   const now = Date.now();
 
-  try {
-    const userGlobal = db.getUser(userId);
-    if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
-      return { allowed: false, remaining: userGlobal[field] - now, cooldownMs };
+  // Comandos globales -> users table, comandos por chat -> chat_users table
+  const isGlobal = isGlobalCommand(command);
+
+  if (isGlobal) {
+    // Tabla users
+    try {
+      const userGlobal = db.getUser(userId);
+      if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
+        return { allowed: false, remaining: userGlobal[field] - now, cooldownMs };
+      }
+    } catch {}
+  } else {
+    // Tabla chat_users (requiere chatId)
+    if (chatId) {
+      try {
+        const userChat = db.getChatUser(chatId, userId);
+        if (userChat && userChat[field] && now < userChat[field]) {
+          return { allowed: false, remaining: userChat[field] - now, cooldownMs };
+        }
+      } catch {}
     }
-  } catch {}
+  }
 
   return { allowed: true, remaining: 0, cooldownMs };
 }
 
-export function setCooldown(command, userId) {
+export function setCooldown(command, userId, chatId = null) {
   const cooldownMs = getCooldownMs(command);
   if (!cooldownMs) return;
 
+  const primary = getPrimary(command);
   const field = getDbField(command);
-  const now = Date.now();
-  const expiry = now + cooldownMs;
+  const expiry = Date.now() + cooldownMs;
 
-  try {
-    const userGlobal = db.getUser(userId);
-    if (userGlobal && Object.prototype.hasOwnProperty.call(userGlobal, field)) {
-      db.setUser(userId, field, now + cooldownMs);
+  const isGlobal = isGlobalCommand(command);
+
+  if (isGlobal) {
+    // Tabla users
+    try {
+      const userGlobal = db.getUser(userId);
+      if (userGlobal && Object.prototype.hasOwnProperty.call(userGlobal, field)) {
+        db.setUser(userId, field, Date.now() + cooldownMs);
+      }
+    } catch {}
+  } else {
+    // Tabla chat_users (requiere chatId)
+    if (chatId) {
+      try {
+        db.setCreate('chat_users', [chatId, userId], field, 0);
+        db.setChatUser(chatId, userId, field, Date.now() + cooldownMs);
+      } catch {}
     }
-  } catch {}
+  }
 }
 
-export function getCooldownRemaining(command, userId) {
+export function getCooldownRemaining(command, userId, chatId = null) {
   const cooldownMs = getCooldownMs(command);
   if (!cooldownMs) return 0;
 
+  const primary = getPrimary(command);
   const field = getDbField(command);
   const now = Date.now();
 
-  try {
-    const userGlobal = db.getUser(userId);
-    if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
-      return userGlobal[field] - now;
+  const isGlobal = isGlobalCommand(command);
+
+  if (isGlobal) {
+    try {
+      const userGlobal = db.getUser(userId);
+      if (userGlobal && userGlobal[field] && now < userGlobal[field]) {
+        return userGlobal[field] - now;
+      }
+    } catch {}
+  } else {
+    if (chatId) {
+      try {
+        const userChat = db.getChatUser(chatId, userId);
+        if (userChat && userChat[field] && now < userChat[field]) {
+          return userChat[field] - now;
+        }
+      } catch {}
     }
-  } catch {}
+  }
 
   return 0;
 }

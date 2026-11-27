@@ -5,7 +5,7 @@ export default {
   category: 'economy',
   description: 'Retirar tus coins del banco.',
   run: async ({ msg, sock, args, usedPrefix, command }) => {
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -40,7 +40,7 @@ export default {
     }    
     db.setChatUser(chatId, senderId, 'bank', user.bank - count);
     db.setChatUser(chatId, senderId, 'coins', (user.coins || 0) + count);
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
     await msg.reply(`✎ Has retirado *¥${count.toLocaleString()} ${currency}* del banco, ahora podras usarlo pero tambien podran robartelo.`);
   }
 };

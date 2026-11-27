@@ -5,7 +5,7 @@ export default {
   category: 'economy',
   description: 'Depositar tus coins en el banco.',
   run: async ({ msg, sock, args, usedPrefix, command }) => {
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -40,7 +40,7 @@ export default {
     }        
     db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) - count);
     db.setChatUser(msg.chat, msg.sender, 'bank', (user.bank || 0) + count);
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
     await msg.reply(`ꕥ Has depositado *¥${count.toLocaleString()} ${monedas}* en tu Banco`);
   }
 };

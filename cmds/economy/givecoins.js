@@ -5,7 +5,7 @@ export default {
   category: 'economy',
   description: 'Dar coins a un usuario.',
   run: async ({ msg, sock, args, usedPrefix, command, text }) => {
-    const cd = checkCooldown(command, msg.sender);
+    const cd = checkCooldown(command, msg.sender, msg.chat);
     if (!cd.allowed) {
       return sock.reply(msg.chat, `ꕥ Debes esperar *${formatMs(cd.remaining)}* para usar *${usedPrefix + command}* de nuevo.`, msg);
     }
@@ -36,7 +36,7 @@ export default {
     }        
     db.setChatUser(chatId, msg.sender, 'bank', senderData.bank - cantidad);
     db.setChatUser(chatId, who, 'bank', (targetData.bank || 0) + cantidad);
-    setCooldown(command, msg.sender);
+    setCooldown(command, msg.sender, msg.chat);
     const userData = db.getUser(who);
     let name = userData?.name || who.split('@')[0];
     await sock.sendMessage(chatId, { text: `❀ Transferiste *¥${cantidad.toLocaleString()} ${monedas}* a *${name}*\n> Ahora tienes *¥${(senderData.bank - cantidad).toLocaleString()} ${monedas}* en tu banco.`, mentions: [who] }, { quoted: msg });
