@@ -309,7 +309,13 @@ app.get('/api/chat-users', authMiddleware, (req, res) => {
         totalPages: 0
       });
     }
-    users = users.map(u => ({ ...u, characters: JSON.parse(u.characters || '[]'), stats: JSON.parse(u.stats || '{}') }));
+    users = users.map(u => {
+      let characters = [];
+      let stats = {};
+      try { characters = JSON.parse(u.characters || '[]'); } catch { characters = []; }
+      try { stats = JSON.parse(u.stats || '{}'); } catch { stats = {}; }
+      return { ...u, characters, stats };
+    });
 
     // Sort
     users.sort((a, b) => {
