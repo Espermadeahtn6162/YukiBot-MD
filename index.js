@@ -17,6 +17,7 @@ import db from '#db';
 import NodeCache from "node-cache";
 import { createSignalCache } from '#core/signal-cache';
 import { beginMessage, instrumentSocket } from '#core/latency';
+import { startWebServer } from './web/server.js';
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
@@ -287,6 +288,8 @@ export async function startBot() {
       isRestarting = false;
       const userName = sock.user.name || "Desconocido";
       log.success(`[ ✿ ]  Conectado a: ${userName}`);
+      // Update web panel status
+      global.botStatus = { connected: true, uptime: Date.now(), user: userName };
       if (!botReady) {
         botReady = true;
         // Warmup en background, no bloquea el ready
@@ -296,6 +299,7 @@ export async function startBot() {
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
     if (connection === "close") {
       remove(sock);
+      global.botStatus = { connected: false, uptime: Date.now() };
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
         log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
@@ -336,10 +340,18 @@ export async function startBot() {
 setInterval(cleanCache, 60 * 60 * 1000);
 cleanCache();
 
+let webServer = null;
+
 (async () => {
   await initDB();
   await cmdsLoader();
   await startBot();
+
+  // Iniciar panel web después de que el bot conecte
+  const botId = global.sock?.user?.id?.split(':')[0] + '@s.whatsapp.net' || 'unknown';
+  const botStatus = { connected: false, uptime: Date.now() };
+  webServer = await startWebServer(botId, botStatus);
+
   // loadBots se ejecuta en background (se auto-reprograma cada 60s)
   loadBots().catch(() => {});
 })();

@@ -108,18 +108,8 @@ export default {
 
       const cleanText = args.join(' ').trim();
       const parts = cleanText.split(/[\u2022|]/).map((p) => p.trim());
-
-      // Sanitizar input del usuario: solo alphanum, espacios, guiones, underscores, emojis b\u00e1sicos
-      // Longitud m\u00e1xima 30 chars para packname, 30 para author (l\u00edmite WA)
-      const sanitize = (str, maxLen = 30) =>
-        str
-          .replace(/[^\p{L}\p{N}\p{Emoji}\s\-_]/gu, '') // solo letras, n\u00fameros, emojis, espacio, -, _
-          .replace(/\s+/g, ' ')                         // colapsar espacios
-          .trim()
-          .slice(0, maxLen);
-
-      const packname = sanitize(parts[0] || texto1);
-      const author = sanitize(parts.length > 1 ? parts[1] : (cleanText ? (meta1 ? texto2 : '') : texto2));
+      const packname = parts[0] || texto1;
+      const author = parts.length > 1 ? parts[1] : (cleanText ? (meta1 ? texto2 : '') : texto2);
 
       let webpBuffer = null;
       let opusBuffer = null;
@@ -127,9 +117,9 @@ export default {
       // Caso 1: Video directo o citado (extrae el video como sticker animado y el audio como opus)
       if (/video/.test(quotedMime)) {
         const duration = (quoted.msg || quoted).seconds || 0;
-        if (duration > 15) {
+        if (duration > 40) {
           cleanup();
-          return msg.reply('《✧》 El video no puede ser muy largo (máximo 15 segundos).');
+          return msg.reply('《✧》 El video no puede ser muy largo (máximo 40 segundos).');
         }
         const vidBuf = await quoted.download();
         const vidPath = `./tmp/in-vid-${Date.now()}.mp4`;
