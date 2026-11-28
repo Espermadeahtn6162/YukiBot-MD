@@ -347,10 +347,14 @@ let webServer = null;
   await cmdsLoader();
   await startBot();
 
-  // Iniciar panel web después de que el bot conecte
+  // Iniciar panel web con puerto aleatorio
   const botId = global.sock?.user?.id?.split(':')[0] + '@s.whatsapp.net' || 'unknown';
   const botStatus = { connected: false, uptime: Date.now() };
-  webServer = await startWebServer(botId, botStatus);
+  const { server, url, port } = await startWebServer(botId, botStatus);
+  webServer = server;
+
+  console.log(`\n📱 Panel de administración disponible en: ${url}`);
+  console.log(`   Credenciales: admin / admin123 (cambia con ADMIN_PASSWORD)\n`);
 
   // loadBots se ejecuta en background (se auto-reprograma cada 60s)
   loadBots().catch(() => {});

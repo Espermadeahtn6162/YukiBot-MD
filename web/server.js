@@ -14,7 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.WEB_PORT || 3000;
+// Puerto aleatorio si no se especifica (0 = SO elige uno libre)
+const PORT = process.env.WEB_PORT ? parseInt(process.env.WEB_PORT) : 0;
 const JWT_SECRET = process.env.JWT_SECRET || 'yuki-secret-change-in-production';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
@@ -366,8 +367,13 @@ export function startWebServer(botId, botStatus) {
 
   return new Promise((resolve) => {
     const server = app.listen(PORT, () => {
-      console.log(`🌐 Panel web iniciado en http://localhost:${PORT}`);
-      resolve(server);
+      const actualPort = server.address().port;
+      const url = `http://localhost:${actualPort}`;
+      console.log(`\n🌐 Panel web iniciado en: ${url}`);
+      console.log(`   (Puerto aleatorio asignado: ${actualPort})\n`);
+      // Guardar URL global para acceso desde el bot
+      global.botStatus = { ...global.botStatus, webUrl: url, webPort: actualPort };
+      resolve({ server, url, port: actualPort });
     });
   });
 }
