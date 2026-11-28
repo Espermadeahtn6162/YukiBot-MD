@@ -20,10 +20,10 @@ const modalContent = document.getElementById('modalContent');
 const modalClose = document.getElementById('modalClose');
 const toastContainer = document.getElementById('toastContainer');
 
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
+// Initialize - setup listeners FIRST, then check auth
+document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
+  checkAuth();
   startStatusPolling();
 });
 
@@ -37,7 +37,8 @@ async function checkAuth() {
     }
     // Authenticated
     loadPage(currentPage);
-  } catch {
+  } catch (e) {
+    console.error('Auth check error:', e);
     showLoginModal();
   }
 }
@@ -503,7 +504,7 @@ function openUserModal(userId, name) {
     </div>
     <div class="p-4 border-t border-gray-200 flex justify-end gap-2">
       <button onclick="modalClose.click()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Cancelar</button>
-      <button onclick="saveUser('${escapeHtml(modalTitle.textContent.replace('Editar Usuario: ', '')')}')" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Guardar</button>
+      <button onclick="saveUserFromModal()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Guardar</button>
     </div>
   `;
   modal.classList.remove('hidden');
@@ -511,6 +512,14 @@ function openUserModal(userId, name) {
 }
 
 function saveUser(name) {
+  showToast('Función en desarrollo', 'info');
+  modalClose.click();
+}
+
+function saveUserFromModal() {
+  // Get the user ID from the modal title
+  const title = modalTitle.textContent;
+  const name = title.replace('Editar Usuario: ', '');
   showToast('Función en desarrollo', 'info');
   modalClose.click();
 }

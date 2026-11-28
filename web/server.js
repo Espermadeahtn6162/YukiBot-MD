@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from '#db';
-import { getSettings, setSettings, getChat, getUser, getChatUser } from '#db';
+import { getSettings, setSettings, getChat, setChat, getUser, getChatUser } from '#db';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -206,6 +206,8 @@ app.get('/api/users', authMiddleware, (req, res) => {
     const { page = 1, limit = 50, search } = req.query;
     let users = getUser();
 
+    console.log(`[API] /api/users - Total users in DB: ${users.length}`);
+
     if (search) {
       const s = search.toLowerCase();
       users = users.filter(u =>
@@ -227,6 +229,7 @@ app.get('/api/users', authMiddleware, (req, res) => {
       totalPages: Math.ceil(users.length / limit)
     });
   } catch (e) {
+    console.error('[API] /api/users error:', e);
     res.status(500).json({ error: e.message });
   }
 });
