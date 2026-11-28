@@ -42,7 +42,7 @@ function normalizePhone(input) {
 
 const { say } = cfonts
 console.log(chalk.magentaBright('\n❀ Iniciando...'))
-  say('Yuki Suou', {
+  say('Daxer', {
   align: 'center',           
   gradient: ['red', 'blue'] 
 })
