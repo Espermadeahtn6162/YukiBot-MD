@@ -341,8 +341,8 @@ async function loadAnalytics() {
     const cmdData = await cmdRes.json();
     createCommandsUsageChart(cmdData);
 
-    // Category Distribution
-    const catRes = await fetch(`${API_BASE}/charts/commands-usage`, { credentials: 'include' });
+    // Category Distribution (new endpoint)
+    const catRes = await fetch(`${API_BASE}/charts/commands-by-category`, { credentials: 'include' });
     const catData = await catRes.json();
     createCategoryChart(catData);
 

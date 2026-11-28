@@ -301,6 +301,14 @@ app.get('/api/chat-users', authMiddleware, (req, res) => {
     if (!chatId) return res.status(400).json({ error: 'chatId requerido' });
 
     let users = getChatUser(chatId);
+    if (!users || users.length === 0) {
+      return res.json({
+        users: [],
+        total: 0,
+        page: parseInt(page),
+        totalPages: 0
+      });
+    }
     users = users.map(u => ({ ...u, characters: JSON.parse(u.characters || '[]'), stats: JSON.parse(u.stats || '{}') }));
 
     // Sort
@@ -319,6 +327,7 @@ app.get('/api/chat-users', authMiddleware, (req, res) => {
       totalPages: Math.ceil(users.length / limit)
     });
   } catch (e) {
+    console.error('[API] /api/chat-users error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -529,6 +538,24 @@ app.get('/api/charts/economy-distribution', authMiddleware, (req, res) => {
       count: users.filter(u => (u.coins || 0) + (u.bank || 0) >= r.min && (u.coins || 0) + (u.bank || 0) < r.max).length
     }));
     res.json(distribution);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/charts/commands-by-category', authMiddleware, (req, res) => {
+  try {
+    const commands = Array.from(global.comandos?.entries() || []);
+    const categoryCounts = {};
+    commands.forEach(([name, data]) => {
+      const cat = data.category || 'general';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+    const data = Object.entries(categoryCounts).map(([category, count]) => ({
+      category,
+      count
+    })).sort((a, b) => b.count - a.count);
+    res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

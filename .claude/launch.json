@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Bot Principal (npm start)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 0
+    },
+    {
+      "name": "Panel Web Admin (Express)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["web/server.js"],
+      "port": 0,
+      "url": "http://localhost:${port}"
+    }
+  ]
+}
