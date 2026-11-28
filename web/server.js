@@ -17,7 +17,7 @@ const app = express();
 // Puerto aleatorio si no se especifica (0 = SO elige uno libre)
 const PORT = process.env.WEB_PORT ? parseInt(process.env.WEB_PORT) : 0;
 const JWT_SECRET = process.env.JWT_SECRET || 'yuki-secret-change-in-production';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Aquino2002';
 
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -357,7 +357,8 @@ app.get('/api/commands', authMiddleware, (req, res) => {
 
 // ==================== FRONTEND ====================
 
-app.get('*', (req, res) => {
+// SPA fallback - Express 5 compatible
+app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
