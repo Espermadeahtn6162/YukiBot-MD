@@ -6,6 +6,7 @@
   <title>YukiBot Panel</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     .sidebar { transition: transform 0.3s ease; }
     @media (max-width: 768px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } }
@@ -15,6 +16,21 @@
     .loading { opacity: 0.6; pointer-events: none; }
     .toast { animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    .dark { background-color: #1f2937; color: #f9fafb; }
+    .dark .bg-white { background-color: #1f2937 !important; }
+    .dark .bg-gray-50 { background-color: #111827 !important; }
+    .dark .bg-gray-100 { background-color: #374151 !important; }
+    .dark .text-gray-800 { color: #f9fafb !important; }
+    .dark .text-gray-700 { color: #e5e7eb !important; }
+    .dark .text-gray-600 { color: #d1d5db !important; }
+    .dark .text-gray-500 { color: #9ca3af !important; }
+    .dark .border-gray-200 { border-color: #374151 !important; }
+    .dark .border-gray-100 { border-color: #374151 !important; }
+    .dark .hover\:bg-gray-50:hover { background-color: #374151 !important; }
+    .dark .hover\:bg-gray-100:hover { background-color: #4b5563 !important; }
+    .dark .bg-gray-900 { background-color: #0f172a !important; }
+    .dark .text-green-300 { color: #86efac !important; }
+    .chart-container { position: relative; height: 300px; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex">
@@ -31,6 +47,9 @@
         <a href="#" data-page="dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
           <i class="fas fa-home w-5"></i> Dashboard
         </a>
+        <a href="#" data-page="analytics" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
+          <i class="fas fa-chart-line w-5"></i> Analíticas
+        </a>
         <a href="#" data-page="settings" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
           <i class="fas fa-cog w-5"></i> Configuración
         </a>
@@ -46,15 +65,26 @@
         <a href="#" data-page="commands" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
           <i class="fas fa-terminal w-5"></i> Comandos
         </a>
+        <a href="#" data-page="bot-control" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
+          <i class="fas fa-robot w-5"></i> Control Bot
+        </a>
+        <a href="#" data-page="backup" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
+          <i class="fas fa-database w-5"></i> Backups
+        </a>
         <a href="#" data-page="logs" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition">
           <i class="fas fa-file-alt w-5"></i> Logs
         </a>
       </nav>
       <div class="p-4 border-t border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-500">Tema</span>
+          <button id="themeToggle" class="w-10 h-5 bg-gray-200 rounded-full relative p-0.5 transition-colors" aria-label="Cambiar tema">
+            <span id="themeThumb" class="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform"></span>
+          </button>
+        </div>
         <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition">
           <i class="fas fa-sign-out-alt w-5"></i> Cerrar Sesión
         </button>
-      </div>
     </div>
   </aside>
 
@@ -286,6 +316,98 @@
       </div>
     </div>
   </main>
+
+  <!-- Analytics Page -->
+  <div id="page-analytics" class="page hidden">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2"><i class="fas fa-chart-line text-blue-500"></i> Analíticas</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200">
+          <h3 class="font-semibold mb-3">Crecimiento de Usuarios (30 días)</h3>
+          <div class="chart-container"><canvas id="usersGrowthChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200">
+          <h3 class="font-semibold mb-3">Distribución de Economía</h3>
+          <div class="chart-container"><canvas id="economyDistributionChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200">
+          <h3 class="font-semibold mb-3">Uso de Comandos (Top 10)</h3>
+          <div class="chart-container"><canvas id="commandsUsageChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200">
+          <h3 class="font-semibold mb-3">Comandos por Categoría</h3>
+          <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bot Control Page -->
+  <div id="page-bot-control" class="page hidden">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2"><i class="fas fa-robot text-purple-500"></i> Control del Bot</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200 text-center">
+          <div class="text-4xl mb-2"><i class="fas fa-power-off text-red-500"></i></div>
+          <h3 class="font-semibold mb-1">Reiniciar Bot</h3>
+          <p class="text-sm text-gray-500 mb-3">Reinicia completamente el proceso del bot</p>
+          <button onclick="restartBot()" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition">Reiniciar Ahora</button>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200 text-center">
+          <div class="text-4xl mb-2"><i class="fas fa-stop text-orange-500"></i></div>
+          <h3 class="font-semibold mb-1">Detener Bot</h3>
+          <p class="text-sm text-gray-500 mb-3">Detiene completamente el bot</p>
+          <button onclick="stopBot()" class="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition">Detener Ahora</button>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5 border border-gray-200 text-center">
+          <div class="text-4xl mb-2"><i class="fas fa-qrcode text-green-500"></i></div>
+          <h3 class="font-semibold mb-1">Código QR</h3>
+          <p class="text-sm text-gray-500 mb-3">Escanea para vincular WhatsApp</p>
+          <button onclick="loadQR()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">Generar QR</button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-5 border border-gray-200 mb-6">
+        <h3 class="font-semibold mb-3">Código de Emparejamiento</h3>
+        <div class="flex gap-3 mb-3">
+          <button onclick="loadPairingCode()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">Generar Código</button>
+          <button onclick="copyPairingCode()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" disabled id="copyPairingBtn">Copiar</button>
+        </div>
+        <div id="pairingCodeDisplay" class="font-mono text-lg bg-gray-100 p-4 rounded-lg text-center min-h-[60px] flex items-center justify-center text-gray-500"></div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-5 border border-gray-200">
+        <h3 class="font-semibold mb-3">Información del Sistema</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="systemInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backup Page -->
+  <div id="page-backup" class="page hidden">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2"><i class="fas fa-database text-green-500"></i> Gestión de Backups</h2>
+      <div class="flex justify-between mb-4">
+        <button onclick="createBackup()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+          <i class="fas fa-plus"></i> Crear Backup
+        </button>
+        <button onclick="loadBackups()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Actualizar</button>
+      </div>
+      <div class="table-container">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr class="text-left text-gray-500 border-b">
+              <th class="p-3">Nombre</th>
+              <th class="p-3">Tamaño</th>
+              <th class="p-3">Fecha</th>
+              <th class="p-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="backupsTable" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Container -->
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
